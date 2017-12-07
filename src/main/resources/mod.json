@@ -1,0 +1,11 @@
+{
+	"main" : "fr.openent.supportpivot.Supportpivot",
+	"port" : 9595,
+	"app-name" : "Supportpivot",
+	"app-address" : "/supportpivot",
+	"app-icon" : "Supportpivot-large",
+	"app-displayName" : "Supportpivot",
+	"mode": "dev",
+	"entcore.port" : 8090,
+	"auto-redeploy": false
+}
