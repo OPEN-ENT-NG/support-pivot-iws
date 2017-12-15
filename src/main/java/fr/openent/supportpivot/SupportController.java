@@ -4,6 +4,7 @@ import fr.openent.supportpivot.service.DemandeService;
 import fr.openent.supportpivot.service.impl.DefaultDemandeServiceImpl;
 import fr.wseduc.rs.Post;
 import fr.wseduc.webutils.Either;
+import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.request.RequestUtils;
 import org.entcore.common.controller.ControllerHelper;
 import org.vertx.java.core.Handler;
@@ -29,7 +30,21 @@ public class SupportController extends ControllerHelper{
         RequestUtils.bodyToJson(request, new Handler<JsonObject>() {
             @Override
             public void handle(final JsonObject resource) {
-                demandeService.add(resource, defaultResponseHandler(request));
+                demandeService.add(resource, new Handler<Either<String, JsonObject>>() {
+                    @Override
+                    public void handle(Either<String, JsonObject> event) {
+                        if (event.isRight()) {
+                            Renders.renderJson(request, event.right().getValue(), 200);
+                        } else {
+                            String errorCode = event.left().getValue();
+                            JsonObject error = new JsonObject()
+                                    .putString("errorCode", event.left().getValue())
+                                    .putString("errorMessage", "")
+                                    .putString("status", "KO");
+                            Renders.renderJson(request, error, 400);
+                        }
+                    }
+                });
             }
         });
     }
