@@ -42,9 +42,19 @@ public class Supportpivot extends BaseServer {
             ATTRIBUTION_FIELD
             };
 
+    /**
+     * Champs obligatoires
+     */
+    public static final String[] ENT_MANDATORY_FIELDS = {
+            IDENT_FIELD,
+            COLLECTIVITY_FIELD,
+            CREATOR_FIELD,
+            TITLE_FIELD,
+            DESCRIPTION_FIELD,
+            ATTRIBUTION_FIELD
+    };
 
-
-	@Override
+    @Override
 	public void start() {
 		super.start();
 		addController(new SupportController());

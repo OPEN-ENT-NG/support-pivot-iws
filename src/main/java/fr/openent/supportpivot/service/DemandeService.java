@@ -9,4 +9,7 @@ import org.vertx.java.core.json.JsonObject;
  */
 public interface DemandeService {
     public void add(JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    public void addIWS(JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    public void addENT(JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    public void sendToIWS (JsonObject ressource, Handler<Either<String, JsonObject>> handler);
 }

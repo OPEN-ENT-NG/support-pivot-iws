@@ -26,26 +26,43 @@ public class SupportController extends ControllerHelper{
     }
 
     @Post("/demande")
-    public void demandeSupport(final HttpServerRequest request) {
+    public void demandeSupportIWS(final HttpServerRequest request) {
         RequestUtils.bodyToJson(request, new Handler<JsonObject>() {
             @Override
             public void handle(final JsonObject resource) {
-                demandeService.add(resource, new Handler<Either<String, JsonObject>>() {
-                    @Override
-                    public void handle(Either<String, JsonObject> event) {
-                        if (event.isRight()) {
-                            Renders.renderJson(request, event.right().getValue(), 200);
-                        } else {
-                            String errorCode = event.left().getValue();
-                            JsonObject error = new JsonObject()
-                                    .putString("errorCode", errorCode)
-                                    .putString("errorMessage", "")
-                                    .putString("status", "KO");
-                            Renders.renderJson(request, error, 400);
-                        }
-                    }
-                });
+                demandeService.addIWS(resource, getDefaultResponseHandler(request));
             }
         });
     }
+
+
+    @Post("/demandeENT")
+    public void demandeSupportENT(final HttpServerRequest request) {
+        RequestUtils.bodyToJson(request, new Handler<JsonObject>() {
+            @Override
+            public void handle(final JsonObject resource) {
+                demandeService.addENT(resource, getDefaultResponseHandler(request));
+            }
+        });
+    }
+
+    private Handler<Either<String, JsonObject>> getDefaultResponseHandler(final HttpServerRequest request){
+        return new Handler<Either<String, JsonObject>>() {
+            @Override
+            public void handle(Either<String, JsonObject> event) {
+                if (event.isRight()) {
+                    Renders.renderJson(request, event.right().getValue(), 200);
+                } else {
+                    String errorCode = event.left().getValue();
+                    JsonObject error = new JsonObject()
+                            .putString("errorCode", errorCode)
+                            .putString("errorMessage", "")
+                            .putString("status", "KO");
+                    Renders.renderJson(request, error, 400);
+                }
+            }
+        };
+    }
+
+
 }
