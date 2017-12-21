@@ -38,7 +38,7 @@ public class SupportController extends ControllerHelper{
                         } else {
                             String errorCode = event.left().getValue();
                             JsonObject error = new JsonObject()
-                                    .putString("errorCode", event.left().getValue())
+                                    .putString("errorCode", errorCode)
                                     .putString("errorMessage", "")
                                     .putString("status", "KO");
                             Renders.renderJson(request, error, 400);
