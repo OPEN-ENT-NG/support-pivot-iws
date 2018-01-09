@@ -2,12 +2,15 @@ package fr.openent.supportpivot;
 
 import fr.openent.supportpivot.service.DemandeService;
 import fr.openent.supportpivot.service.impl.DefaultDemandeServiceImpl;
+import fr.wseduc.bus.BusAddress;
 import fr.wseduc.rs.Post;
+import fr.wseduc.security.SecuredAction;
 import fr.wseduc.webutils.Either;
 import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.request.RequestUtils;
 import org.entcore.common.controller.ControllerHelper;
 import org.vertx.java.core.Handler;
+import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.http.HttpServerRequest;
 import org.vertx.java.core.json.JsonObject;
 
@@ -47,5 +50,13 @@ public class SupportController extends ControllerHelper{
                 });
             }
         });
+    }
+
+    @BusAddress("supportpivot.demande")
+    public void busEvents(Message<JsonObject> message) {
+        JsonObject issue = message.body().getObject("issue");
+        message.reply(new JsonObject().putString("status", "ok")
+            .putString("message", "invalid.action")
+            .putObject("issue", issue));
     }
 }
