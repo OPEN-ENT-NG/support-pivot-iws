@@ -2,6 +2,9 @@ package fr.openent.supportpivot;
 
 import org.entcore.common.http.BaseServer;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Supportpivot extends BaseServer {
 
     /**
@@ -11,6 +14,7 @@ public class Supportpivot extends BaseServer {
     public final static String IDENT_FIELD = "id_ent";
     public final static String IDJIRA_FIELD = "id_jira";
     public final static String COLLECTIVITY_FIELD = "collectivite";
+    public final static String ACADEMY_FIELD = "academie";
     public final static String CREATOR_FIELD = "demandeur";
     public final static String TICKETTYPE_FIELD = "type_demande";
     public final static String TITLE_FIELD = "titre";
@@ -28,6 +32,8 @@ public class Supportpivot extends BaseServer {
     public final static String DATE_RESOIWS_FIELD = "date_resolution_iws";
     public final static String DATE_RESOENT_FIELD = "date_resolution_ent";
     public final static String DATE_RESOJIRA_FIELD = "date_resolution_jira";
+    public final static String TECHNICAL_RESP_FIELD = "reponse_technique";
+    public final static String CLIENT_RESP_FIELD = "reponse_client";
     public final static String ATTRIBUTION_FIELD = "attribution";
 
     /**
