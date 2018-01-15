@@ -13,6 +13,11 @@
         "integration-mode" : "HTTP",
         "app-registry.port" : 8012,
         "mode" : "${mode}",
-        "entcore.port" : 8009
+        "entcore.port" : 8009,
+		"default-collectivity" : "MDP",
+		"default-attribution" : "IWS",
+		"default-tickettype" : "Assistance",
+		"default-priority" : "Mineure",
+        "mail-iws" : "thomas.coleno@cgi.com"
       }
     }
