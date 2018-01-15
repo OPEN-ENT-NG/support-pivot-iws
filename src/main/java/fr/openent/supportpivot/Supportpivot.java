@@ -2,9 +2,6 @@ package fr.openent.supportpivot;
 
 import org.entcore.common.http.BaseServer;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class Supportpivot extends BaseServer {
 
     /**
@@ -36,6 +33,7 @@ public class Supportpivot extends BaseServer {
     public final static String CLIENT_RESP_FIELD = "reponse_client";
     public final static String ATTRIBUTION_FIELD = "attribution";
 
+    public final static String ATTRIBUTION_IWS = "IWS";
     /**
      * Champs obligatoires
      */
@@ -53,11 +51,9 @@ public class Supportpivot extends BaseServer {
      */
     public static final String[] ENT_MANDATORY_FIELDS = {
             IDENT_FIELD,
-            COLLECTIVITY_FIELD,
             CREATOR_FIELD,
             TITLE_FIELD,
-            DESCRIPTION_FIELD,
-            ATTRIBUTION_FIELD
+            DESCRIPTION_FIELD
     };
 
     @Override

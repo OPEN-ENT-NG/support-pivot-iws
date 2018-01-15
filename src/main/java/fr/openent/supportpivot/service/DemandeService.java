@@ -7,10 +7,14 @@ import org.vertx.java.core.json.JsonObject;
 
 /**
  * Created by colenot on 07/12/2017.
+ *
+ * Service to handle pivot information and send at the right place
  */
 public interface DemandeService {
-    public void add(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
-    public void addIWS(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
-    public void addENT(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
-    public void sendToIWS (HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    void add(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    void addIWS(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    void addENT(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    void sendToIWS (HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+
+    void testMailToIWS(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler);
 }
