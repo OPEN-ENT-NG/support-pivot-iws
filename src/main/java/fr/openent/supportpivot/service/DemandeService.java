@@ -11,10 +11,26 @@ import org.vertx.java.core.json.JsonObject;
  * Service to handle pivot information and send at the right place
  */
 public interface DemandeService {
-    void add(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
-    void addIWS(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
-    void addENT(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
-    void sendToIWS (HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
 
+    /**
+     * Add issue from IWS
+     * Check every mandatory field is present in jsonPivot, then send for treatment
+     * @param jsonPivot JSON object in PIVOT format
+     */
+    void addIWS(HttpServerRequest request, JsonObject jsonPivot, Handler<Either<String, JsonObject>> handler);
+
+    /**
+     * Add issue from ENT
+     * - Check every mandatory field is present in jsonPivot, then send for treatment
+     * - Replace empty values by default ones
+     * - Replace modules names
+     * @param jsonPivot JSON object in PIVOT format
+     */
+    void addENT(JsonObject jsonPivot, Handler<Either<String, JsonObject>> handler);
+
+    /**
+     * Send an issue to IWS with fictive info, for testing purpose
+     * @param mailTo mail to send to
+     */
     void testMailToIWS(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler);
 }

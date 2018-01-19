@@ -13,11 +13,12 @@ import org.vertx.java.core.json.JsonObject;
 import fr.wseduc.webutils.email.EmailSender;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.platform.Container;
-
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import static org.apache.commons.lang3.StringEscapeUtils.escapeHtml4;
 /**
  * Created by colenot on 07/12/2017.
  *
@@ -38,7 +39,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
 
 
-    public DefaultDemandeServiceImpl(Vertx vertx, Container container, EmailSender emailSender) {
+    public DefaultDemandeServiceImpl(Container container, EmailSender emailSender) {
         this.mongo = MongoDb.getInstance();
         this.emailSender = emailSender;
         this.log = container.logger();
@@ -49,12 +50,16 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         this.PRIORITY_DEFAULT = container.config().getString("default-priority");
     }
 
-    public void addIWS(HttpServerRequest request, JsonObject resource, final Handler<Either<String, JsonObject>> handler) {
+    /**
+     * Add issue from IWS
+     * Check every mandatory field is present in jsonPivot, then send for treatment
+     * @param jsonPivot JSON object in PIVOT format
+     */
+    public void addIWS(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        // Check every field is present
         Boolean isAllMandatoryFieldsPresent = true;
         for( String field : Supportpivot.IWS_MANDATORY_FIELDS ) {
-            if( ! resource.containsField(field) ) {
+            if( ! jsonPivot.containsField(field) ) {
                 isAllMandatoryFieldsPresent = false;
             }
         }
@@ -62,17 +67,22 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             handler.handle(new Either.Left<String, JsonObject>("2"));
         }
         else {
-            add(request, resource, handler);
+            add(request, jsonPivot, handler);
         }
-
     }
 
-    public void addENT(HttpServerRequest request, JsonObject resource, final Handler<Either<String, JsonObject>> handler) {
+    /**
+     * Add issue from ENT
+     * - Check every mandatory field is present in jsonPivot, then send for treatment
+     * - Replace empty values by default ones
+     * - Replace modules names
+     * @param jsonPivot JSON object in PIVOT format
+     */
+    public void addENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        // Check every field is present
         Boolean isAllMandatoryFieldsPresent = true;
         for( String field : Supportpivot.ENT_MANDATORY_FIELDS ) {
-            if( ! resource.containsField(field) ) {
+            if( ! jsonPivot.containsField(field) ) {
                 isAllMandatoryFieldsPresent = false;
             }
         }
@@ -80,27 +90,54 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             handler.handle(new Either.Left<String, JsonObject>("2"));
         }
         else {
-            if( !resource.containsField(Supportpivot.COLLECTIVITY_FIELD) ) {
-                resource.putString(Supportpivot.COLLECTIVITY_FIELD, COLLECTIVITY_DEFAULT);
+            if( !jsonPivot.containsField(Supportpivot.COLLECTIVITY_FIELD) ) {
+                jsonPivot.putString(Supportpivot.COLLECTIVITY_FIELD, COLLECTIVITY_DEFAULT);
             }
-            if( !resource.containsField(Supportpivot.ATTRIBUTION_FIELD) ) {
-                resource.putString(Supportpivot.ATTRIBUTION_FIELD, ATTRIBUTION_DEFAULT);
+            if( !jsonPivot.containsField(Supportpivot.ATTRIBUTION_FIELD) ) {
+                jsonPivot.putString(Supportpivot.ATTRIBUTION_FIELD, ATTRIBUTION_DEFAULT);
             }
-            if( !resource.containsField(Supportpivot.TICKETTYPE_FIELD) ) {
-                resource.putString(Supportpivot.TICKETTYPE_FIELD, TICKETTYPE_DEFAULT);
+            if( !jsonPivot.containsField(Supportpivot.TICKETTYPE_FIELD) ) {
+                jsonPivot.putString(Supportpivot.TICKETTYPE_FIELD, TICKETTYPE_DEFAULT);
             }
-            if( !resource.containsField(Supportpivot.PRIORITY_FIELD) ) {
-                resource.putString(Supportpivot.PRIORITY_FIELD, PRIORITY_DEFAULT);
+            if( !jsonPivot.containsField(Supportpivot.PRIORITY_FIELD) ) {
+                jsonPivot.putString(Supportpivot.PRIORITY_FIELD, PRIORITY_DEFAULT);
             }
-            if( resource.containsField(Supportpivot.DATE_CREA_FIELD) ) {
-                String sqlDate = resource.getString(Supportpivot.DATE_CREA_FIELD);
-                resource.putString(Supportpivot.DATE_CREA_FIELD, formatSqlDate(sqlDate));
+            if( jsonPivot.containsField(Supportpivot.DATE_CREA_FIELD) ) {
+                String sqlDate = jsonPivot.getString(Supportpivot.DATE_CREA_FIELD);
+                jsonPivot.putString(Supportpivot.DATE_CREA_FIELD, formatSqlDate(sqlDate));
             }
-            add(request, resource, handler);
-        }
 
+            JsonArray modules = jsonPivot.getArray(Supportpivot.MODULES_FIELD, new JsonArray());
+            JsonArray newModules = new JsonArray();
+            for(Object o : modules){
+                if( o instanceof String ) {
+                    String module = (String)o;
+                    newModules.addString(moduleEntToPivot(module));
+                }
+            }
+            jsonPivot.putArray(Supportpivot.MODULES_FIELD, newModules);
+            add(null, jsonPivot, handler);
+        }
     }
 
+    /**
+     * Get a modules name ENT-like, returns the module name PIVOT-like
+     * Returns original name by default
+     * @param moduleName ENT-like module name
+     * @return PIVOT-like module name encoded in UTF-8
+     */
+    private String moduleEntToPivot(String moduleName) {
+        switch(moduleName) {
+            case "actualites": return new String("Actualités".getBytes(), StandardCharsets.UTF_8);
+            default: return moduleName;
+        }
+    }
+
+    /**
+     * Format a Date from SQL-like format to dd/MM/yyyy
+     * @param sqlDate date to format
+     * @return The date formatted, or the original date is case of error
+     */
     private String formatSqlDate(String sqlDate) {
         SimpleDateFormat input = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
         SimpleDateFormat output = new SimpleDateFormat("dd/MM/yyyy");
@@ -109,19 +146,21 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             return output.format(dateValue);
         } catch (ParseException e) {
             log.error("Supportpivot : invalid date format" + e.getMessage());
-            return "";
+            return sqlDate;
         }
     }
 
+    /**
+     * Get a JSON in Pivot format, and send the information to the right recipient
+     * If no or unknown recipient, save it to mongo
+     * @param jsonPivot Json in pivot format
+     */
+    private void add(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-    @Override
-    public void add(HttpServerRequest request, JsonObject resource, final Handler<Either<String, JsonObject>> handler) {
-
-        if( Supportpivot.ATTRIBUTION_IWS.equals(resource.getString(Supportpivot.ATTRIBUTION_FIELD)) ) {
-            sendToIWS(request, resource, handler);
+        if( Supportpivot.ATTRIBUTION_IWS.equals(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD)) ) {
+            sendToIWS(request, jsonPivot, handler);
         } else {
-            // Insert data into mongodb
-            mongo.insert(DEMANDE_COLLECTION, resource, new Handler<Message<JsonObject>>() {
+            mongo.insert(DEMANDE_COLLECTION, jsonPivot, new Handler<Message<JsonObject>>() {
                 @Override
                 public void handle(Message<JsonObject> retourJson) {
                     JsonObject body = retourJson.body();
@@ -133,75 +172,74 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 }
             });
         }
-
     }
 
 
-    @Override
-    public void sendToIWS(HttpServerRequest request, JsonObject resource, final Handler<Either<String, JsonObject>> handler) {
+    /**
+     * Send pivot information to IWS -- by mail
+     * Every data must be htmlEncoded because of encoding / mails incompatibility
+     * @param jsonPivot JSON in pivot format
+     */
+    private void sendToIWS(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
         StringBuilder mail = new StringBuilder()
             .append("collectivite = ")
-            .append(resource.getString(Supportpivot.COLLECTIVITY_FIELD))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD)))
             .append("<br />academie = ")
-            .append(resource.getString(Supportpivot.ACADEMY_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.ACADEMY_FIELD, "")))
             .append("<br />demandeur = ")
-            .append(resource.getString(Supportpivot.CREATOR_FIELD))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.CREATOR_FIELD)))
             .append("<br />type_demande = ")
-            .append(resource.getString(Supportpivot.TICKETTYPE_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD, "")))
             .append("<br />titre = ")
-            .append(resource.getString(Supportpivot.TITLE_FIELD))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.TITLE_FIELD)))
             .append("<br />description = ")
-            .append(resource.getString(Supportpivot.DESCRIPTION_FIELD))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD)))
             .append("<br />priorite = ")
-            .append(resource.getString(Supportpivot.PRIORITY_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.PRIORITY_FIELD, "")))
             .append("<br />id_jira = ")
-            .append(resource.getString(Supportpivot.IDJIRA_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.IDJIRA_FIELD, "")))
             .append("<br />id_ent = ")
-            .append(resource.getString(Supportpivot.IDENT_FIELD))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.IDENT_FIELD)))
             .append("<br />id_iws = ")
-            .append(resource.getString(Supportpivot.IDIWS_FIELD, ""));
-        //Boucle sur le champs commentaires du tableau JSON
-        JsonArray comm =   resource.getArray(Supportpivot.COMM_FIELD, new JsonArray());
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.IDIWS_FIELD, "")));
+
+        JsonArray comm = jsonPivot.getArray(Supportpivot.COMM_FIELD, new JsonArray());
         for(int i=0 ; i<comm.size();i++){
             mail.append("<br />commentaires = ")
-                    .append(comm.get(i));
+                    .append(escapeHtml4((String)comm.get(i)));
         }
-        //Boucle sur le champs modules du tableau JSON
-        JsonArray modules =   resource.getArray(Supportpivot.MODULES_FIELD, new JsonArray());
+
+        JsonArray modules =   jsonPivot.getArray(Supportpivot.MODULES_FIELD, new JsonArray());
         mail.append("<br />modules = ");
         for(int i=0 ; i<modules.size();i++){
             if(i > 0) {
                 mail.append(", ");
             }
-            mail.append(modules.get(i));
+            mail.append(escapeHtml4((String)modules.get(i)));
         }
         mail.append("<br />statut_iws = ")
-            .append(resource.getString(Supportpivot.STATUSIWS_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.STATUSIWS_FIELD, "")))
             .append("<br />statut_ent = ")
-            .append(resource.getString(Supportpivot.STATUSENT_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.STATUSENT_FIELD, "")))
             .append("<br />statut_jira = ")
-            .append(resource.getString(Supportpivot.STATUSJIRA_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.STATUSJIRA_FIELD, "")))
             .append("<br />date_creation = ")
-            .append(resource.getString(Supportpivot.DATE_CREA_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_CREA_FIELD, "")))
             .append("<br />date_resolution_iws = ")
-            .append(resource.getString(Supportpivot.DATE_RESOIWS_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_RESOIWS_FIELD, "")))
             .append("<br />date_resolution_ent = ")
-            .append(resource.getString(Supportpivot.DATE_RESOENT_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_RESOENT_FIELD, "")))
             .append("<br />date_resolution_jira = ")
-            .append(resource.getString(Supportpivot.DATE_RESOJIRA_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_RESOJIRA_FIELD, "")))
             .append("<br />reponse_technique = ")
-            .append(resource.getString(Supportpivot.TECHNICAL_RESP_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.TECHNICAL_RESP_FIELD, "")))
             .append("<br />reponse_client = ")
-            .append(resource.getString(Supportpivot.CLIENT_RESP_FIELD, ""))
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.CLIENT_RESP_FIELD, "")))
             .append("<br />attribution = ")
-            .append(resource.getString(Supportpivot.ATTRIBUTION_FIELD));
+            .append(escapeHtml4(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD)));
 
-        // TODO Attach a file to the email
-
-        System.out.println(mail);
-
-        String mailTo = resource.getString("email");
+        String mailTo = jsonPivot.getString("email");
         if( mailTo == null || mailTo.isEmpty() ) {
             mailTo = this.MAIL_IWS;
         }
@@ -214,7 +252,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 mail.toString(),
                 null,
                 false,
-                new Handler<Message<JsonObject>>(){
+                new Handler<Message<JsonObject>>() {
                     @Override
                     public void handle(Message<JsonObject> jsonObjectMessage) {
                         handler.handle(new Either.Right<String, JsonObject>(jsonObjectMessage.body()));
@@ -222,28 +260,42 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 });
     }
 
+    /**
+     * Send an issue to IWS with fictive info, for testing purpose
+     * @param mailTo mail to send to
+     */
     @Override
     public void testMailToIWS(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler) {
+
         JsonObject resource = new JsonObject()
                 .putString(Supportpivot.COLLECTIVITY_FIELD, "MDP")
                 .putString(Supportpivot.ACADEMY_FIELD, "Paris")
                 .putString(Supportpivot.CREATOR_FIELD, "Jean Dupont")
                 .putString(Supportpivot.TICKETTYPE_FIELD, "Assistance")
-                .putString(Supportpivot.TITLE_FIELD, "Demande g&eacute;n&eacute;rique de test")
-                .putString(Supportpivot.DESCRIPTION_FIELD, "Demande afin de tester la cr&eacute;ation de demande vers IWS")
+                .putString(Supportpivot.TITLE_FIELD, stringEncode("Demande générique de test"))
+                .putString(Supportpivot.DESCRIPTION_FIELD, stringEncode("Demande afin de tester la création de demande vers IWS"))
                 .putString(Supportpivot.PRIORITY_FIELD, "Mineure")
                 .putArray(Supportpivot.MODULES_FIELD,
-                        new JsonArray().addString("Assistance ENT").addString("Administration"))
+                        new JsonArray().addString(stringEncode("Actualités")).addString("Assistance ENT"))
                 .putString(Supportpivot.IDENT_FIELD, "42")
                 .putArray(Supportpivot.COMM_FIELD, new JsonArray()
                     .addString("Jean Dupont| 17/11/2071 | La correction n'est pas urgente.")
-                    .addString("Administrateur Etab | 10/01/2017 | La demande a &eacute;t&eacute; transmise"))
+                    .addString(stringEncode("Administrateur Etab | 10/01/2017 | La demande a été transmise")))
                 .putString(Supportpivot.STATUSENT_FIELD, "Nouveau")
                 .putString(Supportpivot.DATE_CREA_FIELD, "16/11/2017")
                 .putString(Supportpivot.ATTRIBUTION_FIELD, "IWS")
                 .putString("email", mailTo);
 
         sendToIWS(request, resource, handler);
+    }
+
+    /**
+     * Encode a string in UTF-8
+     * @param in String to encode
+     * @return encoded String
+     */
+    private String stringEncode(String in) {
+        return new String(in.getBytes(), StandardCharsets.UTF_8);
     }
 
 }

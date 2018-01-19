@@ -3,6 +3,7 @@ apply plugin: 'scala'
 
 dependencies {
 	compile "org.entcore:common:$entCoreVersion"
+	compile "org.apache.commons:commons-lang3:3.1"
 	testCompile "org.entcore:tests:$entCoreVersion"
 	testCompile 'io.gatling.highcharts:gatling-charts-highcharts:2.0.3'
 }
