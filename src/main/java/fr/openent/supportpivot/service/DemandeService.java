@@ -15,6 +15,7 @@ public interface DemandeService {
     void addIWS(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
     void addENT(HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
     void sendToIWS (HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
+    void sendToCGI (HttpServerRequest request, JsonObject ressource, Handler<Either<String, JsonObject>> handler);
 
     void testMailToIWS(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler);
 }
