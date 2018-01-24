@@ -12,17 +12,11 @@ import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.request.RequestUtils;
 import org.entcore.common.controller.ControllerHelper;
 import org.entcore.common.email.EmailFactory;
-import org.entcore.common.http.request.JsonHttpServerRequest;
-import org.vertx.java.core.AsyncResult;
 import org.vertx.java.core.Handler;
-import org.vertx.java.core.MultiMap;
-import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.Vertx;
 import org.vertx.java.core.http.HttpServerRequest;
-import org.vertx.java.core.http.HttpServerResponse;
 import org.vertx.java.core.http.RouteMatcher;
-import org.vertx.java.core.http.impl.DefaultHttpServerRequest;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.platform.Container;
 
@@ -39,7 +33,7 @@ import java.util.Map;
  * /testMail/:mail : Send a test mail to address in parameter
  * /demandeENT : Register a demande from Support module
  */
-public class SupportController extends ControllerHelper{
+class SupportController extends ControllerHelper{
 
     private DemandeService demandeService;
 
@@ -49,9 +43,12 @@ public class SupportController extends ControllerHelper{
         super.init(vertx, container, rm, securedActions);
         EmailFactory emailFactory = new EmailFactory(vertx, container, container.config());
         EmailSender emailSender = emailFactory.getSender();
-        this.demandeService = new DefaultDemandeServiceImpl(vertx, container, emailSender);
+        this.demandeService = new DefaultDemandeServiceImpl(container, emailSender);
     }
 
+    /**
+     * Webservice. Receive info from IWS
+     */
     @Post("/demande")
     public void demandeSupportIWS(final HttpServerRequest request) {
         RequestUtils.bodyToJson(request, new Handler<JsonObject>() {
@@ -62,22 +59,10 @@ public class SupportController extends ControllerHelper{
         });
     }
 
-    @Get("testMail/:mail")
-    public void testMailToIWS(final HttpServerRequest request) {
-        final String mailTo = request.params().get("mail");
-        demandeService.testMailToIWS(request, mailTo, getDefaultResponseHandler(request));
-    }
-
-    @Post("/demandeENT")
-    public void demandeSupportENT(final HttpServerRequest request) {
-        RequestUtils.bodyToJson(request, new Handler<JsonObject>() {
-            @Override
-            public void handle(final JsonObject resource) {
-                demandeService.addENT(request, resource, getDefaultResponseHandler(request));
-            }
-        });
-    }
-
+    /**
+     * Get a default handler for HttpServerRequest with added info
+     * @return handler with error code, error message and status
+     */
     private Handler<Either<String, JsonObject>> getDefaultResponseHandler(final HttpServerRequest request){
         return new Handler<Either<String, JsonObject>>() {
             @Override
@@ -96,10 +81,13 @@ public class SupportController extends ControllerHelper{
         };
     }
 
+    /**
+     * Internel webservice. Receive info from support module
+     */
     @BusAddress("supportpivot.demande")
     public void busEvents(final Message<JsonObject> message) {
         final JsonObject issue = message.body().getObject("issue");
-        demandeService.addENT(null, issue, new Handler<Either<String, JsonObject>>() {
+        demandeService.addENT( issue, new Handler<Either<String, JsonObject>>() {
             @Override
             public void handle(Either<String, JsonObject> event) {
                 if(event.isRight()) {
@@ -114,5 +102,14 @@ public class SupportController extends ControllerHelper{
             }
         });
 
+    }
+
+    /**
+     * Webservice. Send an issue to specified mail with fictive info, for testing purpose
+     */
+    @Get("testMail/:mail")
+    public void testMailToIWS(final HttpServerRequest request) {
+        final String mailTo = request.params().get("mail");
+        demandeService.testMailToIWS(request, mailTo, getDefaultResponseHandler(request));
     }
 }

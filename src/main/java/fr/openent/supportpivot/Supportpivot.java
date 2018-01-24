@@ -5,7 +5,7 @@ import org.entcore.common.http.BaseServer;
 public class Supportpivot extends BaseServer {
 
     /**
-     * Déclaration des champs JSON du format pivot
+     * JSON fields for Pivot format
      */
     public final static String IDIWS_FIELD = "id_iws";
     public final static String IDENT_FIELD = "id_ent";
@@ -36,7 +36,7 @@ public class Supportpivot extends BaseServer {
     public final static String ATTRIBUTION_IWS = "IWS";
     public final static String ATTRIBUTION_CGI = "CGI";
     /**
-     * Champs obligatoires
+     * Mandatory fields
      */
     public static final String[] IWS_MANDATORY_FIELDS = {
             IDIWS_FIELD,
@@ -47,9 +47,6 @@ public class Supportpivot extends BaseServer {
             ATTRIBUTION_FIELD
             };
 
-    /**
-     * Champs obligatoires
-     */
     public static final String[] ENT_MANDATORY_FIELDS = {
             IDENT_FIELD,
             CREATOR_FIELD,
