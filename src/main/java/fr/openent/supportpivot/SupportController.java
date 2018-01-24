@@ -33,7 +33,7 @@ import java.util.Map;
  * /testMail/:mail : Send a test mail to address in parameter
  * /demandeENT : Register a demande from Support module
  */
-class SupportController extends ControllerHelper{
+public class SupportController extends ControllerHelper{
 
     private DemandeService demandeService;
 
