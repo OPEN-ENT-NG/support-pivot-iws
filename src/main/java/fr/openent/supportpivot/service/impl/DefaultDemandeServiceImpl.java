@@ -1,5 +1,6 @@
 package fr.openent.supportpivot.service.impl;
 
+import com.fasterxml.jackson.databind.deser.Deserializers;
 import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.service.DemandeService;
 import fr.wseduc.mongodb.MongoDb;
@@ -11,6 +12,7 @@ import org.vertx.java.core.http.HttpServerRequest;
 import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import fr.wseduc.webutils.email.EmailSender;
+import org.vertx.java.core.json.impl.Json;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.platform.Container;
 import java.nio.charset.StandardCharsets;
@@ -34,6 +36,9 @@ import org.vertx.java.core.logging.impl.LoggerFactory;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -59,7 +64,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private final String JIRA_LINK_URL;
 
 
-    public DefaultDemandeServiceImpl(Container container, EmailSender emailSender) {
+    public DefaultDemandeServiceImpl(Vertx vertx, Container container, EmailSender emailSender) {
         this.mongo = MongoDb.getInstance();
         this.emailSender = emailSender;
         this.log = container.logger();
@@ -202,41 +207,84 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         }
     }
 
-    @Override
-    public void sendToCGI(HttpServerRequest request, JsonObject resource, final Handler<Either<String, JsonObject>> handler) {
+    private void sendToCGI(HttpServerRequest request, JsonObject resource, final Handler<Either<String, JsonObject>> handler) {
 
         final AtomicBoolean responseIsSent = new AtomicBoolean(false);
+        final JsonObject jsonJiraTicket = new JsonObject();
 
         System.out.println("---- DEBUT QMER ----");
         System.out.println(this.JIRA_LOGIN);
         System.out.println(this.JIRA_PASSWD);
         System.out.println(this.JIRA_LINK_URL);
 
+        // Login & Passwd Jira
+        String authInfo = new StringBuilder(this.JIRA_LOGIN)
+            .append(":").append(JIRA_PASSWD).toString();
 
-        //{ "fields": {"project":{ "key": "NGMDP" },"summary": "REST test.","description": " REST API","issuetype": {"name": "Assistance" } }}
+        //Exemple : {"fields": {"project":{ "key": "NGMDP" },"summary": "REST test.","description": " REST API","issuetype": {"name": "Assistance" } }}
+/*
+        {
+                "id_iws": "« Identifiant IWS »",
+                "id_ent": "",
+                "id_jira": "",
+                "collectivite": "MDP",
+                "academie": "PARIS",
+                "demandeur": " Gérald Fernandez | gfernandez@yahoo.fr | 0606060606 | Victor Hugo | codeRNE ",
+                "type_demande": " Assistance ",
+                "titre": " Problème de blog",
+                "description": " Je ne peux plus me connecter au blog.",
+                "priorite": " Bloquant ",
+                "modules": ["Blog"],
+            "commentaires": [
+            "20170108091242 | Gérome Dupond | 01/08/2017 09 :12 :42 | Est-ce que vous pouvez essayer en supprimant le billet ",
+                    "20170208093324 | Gerald Fernandez | 02/08/2017 09 :33 :24 | Je viens d’essayer ça ne fonctionne toujours pas ",
+                    "20170208102247 | Gérome Dupond | 02/08/2017 10 :22 :47 | Je viens de corriger, pouvez-vous essayer à nouveau ? ",
+                    "20170208103212 | Gerald Fernandez | 02/08/2017 10 :32 :12 | ça ne fonctionne pas",
+                    "20170208110102 | Gérome Dupond | 02/08/2017 11 :01 :02 | je transmets la demande à l’académie qui vous tiendra informée. "
+	],
+            "pj": [{
+            "nom": "welcome.html",
+                    "contenu": "PCFET0NUWVBFIGh0bWw+CjwhLS0KIH4JQ29weXJpZ2h0IMKpIFdlYlNlcnZpY2VzIHBvdXIgbCfDiWR1Y2F0aW9uLCAyMDE0CiB+CiB+IFRoaXMgZmlsZSBpcyBwYXJ0IG9mIEVOVCBDb3JlLiBFTlQgQ29yZSBpcyBhIHZlcnNhdGlsZSBFTlQgZW5naW5lIGJhc2VkIG9uIHRoZSBKVk0uCiB+CiB+IFRoaXMgcHJvZ3JhbSBpcyBmcmVlIHNvZnR3YXJlOyB5b3UgY2FuIHJlZGlzdHJpYnV0ZSBpdCBhbmQvb3IgbW9kaWZ5CiB+IGl0IHVuZGVyIHRoZSB0ZXJtcyBvZiB0aGUgR05VIEFmZmVybyBHZW5lcmFsIFB1YmxpYyBMaWNlbnNlIGFzCiB+IHB1Ymxpc2hlZCBieSB0aGUgRnJlZSBTb2Z0d2FyZSBGb3VuZGF0aW9uICh2ZXJzaW9uIDMgb2YgdGhlIExpY2Vuc2UpLgogfgogfiBGb3IgdGhlIHNha2Ugb2YgZXhwbGFuYXRpb24sIGFueSBtb2R1bGUgdGhhdCBjb21tdW5pY2F0ZSBvdmVyIG5hdGl2ZQogfiBXZWIgcHJvdG9jb2xzLCBzdWNoIGFzIEhUVFAsIHdpdGggRU5UIENvcmUgaXMgb3V0c2lkZSB0aGUgc2NvcGUgb2YgdGhpcwogfiBsaWNlbnNlIGFuZCBjb3VsZCBiZSBsaWNlbnNlIHVuZGVyIGl0cyBvd24gdGVybXMuIFRoaXMgaXMgbWVyZWx5IGNvbnNpZGVyZWQKIH4gbm9ybWFsIHVzZSBvZiBFTlQgQ29yZSwgYW5kIGRvZXMgbm90IGZhbGwgdW5kZXIgdGhlIGhlYWRpbmcgb2YgImNvdmVyZWQgd29yayIuCiB+CiB+IFRoaXMgcHJvZ3JhbSBpcyBkaXN0cmlidXRlZCBpbiB0aGUgaG9wZSB0aGF0IGl0IHdpbGwgYmUgdXNlZnVsLAogfiBidXQgV0lUSE9VVCBBTlkgV0FSUkFOVFk7IHdpdGhvdXQgZXZlbiB0aGUgaW1wbGllZCB3YXJyYW50eSBvZgogfiBNRVJDSEFOVEFCSUxJVFkgb3IgRklUTkVTUyBGT1IgQSBQQVJUSUNVTEFSIFBVUlBPU0UuCiB+CiAtLT4KCjxodG1sPgo8aGVhZCBsYW5nPSJlbiI+Cgk8bWV0YSBjaGFyc2V0PSJVVEYtOCI+Cgk8bWV0YSBuYW1lPSJ2aWV3cG9ydCIgY29udGVudD0id2lkdGg9ZGV2aWNlLXdpZHRoLCBpbml0aWFsLXNjYWxlPTEsIG1heGltdW0tc2NhbGU9MSwgdXNlci1zY2FsYWJsZT1ubyIgLz4KCgk8dGl0bGU+TWVzIGFwcGxpczwvdGl0bGU+Cgk8c2NyaXB0IHR5cGU9InRleHQvamF2YXNjcmlwdCI+CgkJdmFyIGFwcFByZWZpeCA9ICcuJzsKCTwvc2NyaXB0PgoJPHNjcmlwdCB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiIHNyYz0iL3B1YmxpYy9kaXN0L2VudGNvcmUvbmctYXBwLWM4YjlhMDM1OGMuanMiIGlkPSJjb250ZXh0Ij48L3NjcmlwdD4KCTxzY3JpcHQgdHlwZT0idGV4dC9qYXZhc2NyaXB0IiBzcmM9Ii9wdWJsaWMvZGlzdC9teWFwcHMvYXBwbGljYXRpb24tZjZmMzY5ODJmMi5qcyI+PC9zY3JpcHQ+CjwvaGVhZD4KPGJvZHkgbmctY29udHJvbGxlcj0iQXBwbGljYXRpb25Db250cm9sbGVyIj4KCTxwb3J0YWw+CgkJPGRpdiBjbGFzcz0icm93IiBuZy1pbmNsdWRlPSJ0ZW1wbGF0ZS5jb250YWluZXJzLm1haW4iPjwvZGl2PgoJPC9wb3J0YWw+CjwvYm9keT4KPC9odG1sPgo="
+        },
+            {
+                "nom": "bye.html",
+                    "contenu": "PCFET0NUWVBFIGh0bWw+CjwhLS0KIH4JQ29weXJpZ2h0IMKpIFdlYlNlcnZpY2VzIHBvdXIgbCfDiWR1Y2F0aW9uLCAyMDE0CiB+CiB+IFRoaXMgZmlsZSBpcyBwYXJ0IG9mIEVOVCBDb3JlLiBFTlQgQ29yZSBpcyBhIHZlcnNhdGlsZSBFTlQgZW5naW5lIGJhc2VkIG9uIHRoZSBKVk0uCiB+CiB+IFRoaXMgcHJvZ3JhbSBpcyBmcmVlIHNvZnR3YXJlOyB5b3UgY2FuIHJlZGlzdHJpYnV0ZSBpdCBhbmQvb3IgbW9kaWZ5CiB+IGl0IHVuZGVyIHRoZSB0ZXJtcyBvZiB0aGUgR05VIEFmZmVybyBHZW5lcmFsIFB1YmxpYyBMaWNlbnNlIGFzCiB+IHB1Ymxpc2hlZCBieSB0aGUgRnJlZSBTb2Z0d2FyZSBGb3VuZGF0aW9uICh2ZXJzaW9uIDMgb2YgdGhlIExpY2Vuc2UpLgogfgogfiBGb3IgdGhlIHNha2Ugb2YgZXhwbGFuYXRpb24sIGFueSBtb2R1bGUgdGhhdCBjb21tdW5pY2F0ZSBvdmVyIG5hdGl2ZQogfiBXZWIgcHJvdG9jb2xzLCBzdWNoIGFzIEhUVFAsIHdpdGggRU5UIENvcmUgaXMgb3V0c2lkZSB0aGUgc2NvcGUgb2YgdGhpcwogfiBsaWNlbnNlIGFuZCBjb3VsZCBiZSBsaWNlbnNlIHVuZGVyIGl0cyBvd24gdGVybXMuIFRoaXMgaXMgbWVyZWx5IGNvbnNpZGVyZWQKIH4gbm9ybWFsIHVzZSBvZiBFTlQgQ29yZSwgYW5kIGRvZXMgbm90IGZhbGwgdW5kZXIgdGhlIGhlYWRpbmcgb2YgImNvdmVyZWQgd29yayIuCiB+CiB+IFRoaXMgcHJvZ3JhbSBpcyBkaXN0cmlidXRlZCBpbiB0aGUgaG9wZSB0aGF0IGl0IHdpbGwgYmUgdXNlZnVsLAogfiBidXQgV0lUSE9VVCBBTlkgV0FSUkFOVFk7IHdpdGhvdXQgZXZlbiB0aGUgaW1wbGllZCB3YXJyYW50eSBvZgogfiBNRVJDSEFOVEFCSUxJVFkgb3IgRklUTkVTUyBGT1IgQSBQQVJUSUNVTEFSIFBVUlBPU0UuCiB+CiAtLT4KCjxodG1sPgo8aGVhZCBsYW5nPSJlbiI+Cgk8bWV0YSBjaGFyc2V0PSJVVEYtOCI+Cgk8bWV0YSBuYW1lPSJ2aWV3cG9ydCIgY29udGVudD0id2lkdGg9ZGV2aWNlLXdpZHRoLCBpbml0aWFsLXNjYWxlPTEsIG1heGltdW0tc2NhbGU9MSwgdXNlci1zY2FsYWJsZT1ubyIgLz4KCgk8dGl0bGU+TWVzIGFwcGxpczwvdGl0bGU+Cgk8c2NyaXB0IHR5cGU9InRleHQvamF2YXNjcmlwdCI+CgkJdmFyIGFwcFByZWZpeCA9ICcuJzsKCTwvc2NyaXB0PgoJPHNjcmlwdCB0eXBlPSJ0ZXh0L2phdmFzY3JpcHQiIHNyYz0iL3B1YmxpYy9kaXN0L2VudGNvcmUvbmctYXBwLWM4YjlhMDM1OGMuanMiIGlkPSJjb250ZXh0Ij48L3NjcmlwdD4KCTxzY3JpcHQgdHlwZT0idGV4dC9qYXZhc2NyaXB0IiBzcmM9Ii9wdWJsaWMvZGlzdC9teWFwcHMvYXBwbGljYXRpb24tZjZmMzY5ODJmMi5qcyI+PC9zY3JpcHQ+CjwvaGVhZD4KPGJvZHkgbmctY29udHJvbGxlcj0iQXBwbGljYXRpb25Db250cm9sbGVyIj4KCTxwb3J0YWw+CgkJPGRpdiBjbGFzcz0icm93IiBuZy1pbmNsdWRlPSJ0ZW1wbGF0ZS5jb250YWluZXJzLm1haW4iPjwvZGl2PgoJPC9wb3J0YWw+CjwvYm9keT4KPC9odG1sPgo="
+            }
+],
+            "statut_iws": "En attente",
+                "statut_ent": "En attente",
+                "statut_jira": "En attente",
+                "date_creation": "16/11/2017 09:32:34",
+                "date_resolution_iws": "",
+                "date_resolution_ent": "",
+                "date_resolution_jira": "",
+                "reponse_technique": "",
+                "reponse_client": "",
+                "attribution": "RECTORAT"
+        }
+        */
 
-        StringBuilder ticket_jira = new StringBuilder()
-                .append("{ \"fields\": {")
-                .append("\"project\":{ \"key\": \"")
-                .append(resource.getString(Supportpivot.COLLECTIVITY_FIELD))
-                .append("\" },")
-                .append("academie = ")
-                .append(resource.getString(Supportpivot.ACADEMY_FIELD, ""))
-                .append("demandeur = ")
-                .append(resource.getString(Supportpivot.CREATOR_FIELD))
-                .append("type_demande = ")
-                .append(resource.getString(Supportpivot.TICKETTYPE_FIELD, ""))
-                .append("titre = ")
-                .append(resource.getString(Supportpivot.TITLE_FIELD))
-                .append("description = ")
-                .append(resource.getString(Supportpivot.TECHNICAL_RESP_FIELD, ""))
-                .append("reponse_client = ")
-                .append(resource.getString(Supportpivot.CLIENT_RESP_FIELD, ""))
-                .append("attribution = ")
-                .append(resource.getString(Supportpivot.ATTRIBUTION_FIELD));
 
-        System.out.println(ticket_jira);
 
+        jsonJiraTicket.putObject("fields", new JsonObject()
+            .putObject("project", new JsonObject()
+                    .putString("key", resource.getString(Supportpivot.COLLECTIVITY_FIELD)))
+            .putString("summary", resource.getString(Supportpivot.TITLE_FIELD))
+            .putString("description", resource.getString(Supportpivot.DESCRIPTION_FIELD))
+            .putObject("issuetype", new JsonObject()
+                    .putString("name", resource.getString(Supportpivot.TICKETTYPE_FIELD)))
+            //.putObject("assignee", new JsonObject()
+            //    .putString("name", resource.getString(Supportpivot.TICKETTYPE_FIELD)))
+            //.putObject("labels", new JsonObject()
+            //        .putArray(resource.getString(Supportpivot.MODULES_FIELD)))
+            .putObject("priority", new JsonObject()
+                    .putString("name", resource.getString(Supportpivot.PRIORITY_FIELD))));
+
+
+        final JsonArray jsonJiraComments = resource.getArray(Supportpivot.COMM_FIELD);
+
+
+        log.info(jsonJiraTicket);
 
         // Create ticket via Jira API
 
@@ -249,43 +297,91 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             }
 
         if (jira_URI != null) {
-        final HttpClient httpClient = generateHttpClient(jira_URI);
-        System.out.println("On ouvre");
-        System.out.println(jira_URI);
+            final HttpClient httpClient = generateHttpClient(jira_URI);
 
-        //param du proxy todo
-            // tester avec le web service en GET avec login et mdp
-            // tester apres aves le POST
-            // faire un json avec le JSON object et surtout pas en stringbuilder
+            System.out.println("On ouvre");
+            System.out.println(jira_URI);
 
-        final HttpClientRequest httpClientRequest = httpClient.get(JIRA_LINK_URL  , new Handler<HttpClientResponse>() {
-            @Override
-            public void handle(HttpClientResponse response) {
+            //param du proxy todo
+            // tester avec le web service en GET avec login et mdp : OK
+            // tester apres aves le POST  : OK
+            // faire un json avec le JSON object et surtout pas en stringbuilder : OK
+            // si 302 alors faire suite ...
 
-                log.debug("On test le status :" + response.statusCode());
-                int status = response.statusCode();
+            final HttpClientRequest httpClientRequest = httpClient.post(JIRA_LINK_URL  , new Handler<HttpClientResponse>() {
+                @Override
+                public void handle(HttpClientResponse response) {
 
-                if (response.statusCode() == 200) {
-                    log.debug("Test OK status 200 !");
-                } else {
-                    log.error("Error when calling URL : " + response.statusMessage());
-                    //renderError(request);
+                    System.out.println("On test le status :" + response.statusCode());
+                    int status = response.statusCode();
+
+
+                    // Si le ticket a bien été créé dans JIRA
+                    // HTTP Status Code 201: The request has been fulfilled and has resulted in one or more new resources being created.
+                    if (response.statusCode() == 201) {
+                        System.out.println("Test OK status 201 !");
+
+                        //Récupère le retour
+                        response.bodyHandler(new Handler<Buffer>() {
+                            @Override
+                            public void handle(Buffer buffer) {
+                                //Affiche le retour
+                                JsonObject infoNewJiraTicket = new JsonObject(buffer.toString());
+                                String idNewJiraTicket = infoNewJiraTicket.getString("key");
+
+                                log.info("JIRA ticket Informations : " + infoNewJiraTicket);
+                                log.info("JIRA ticket ID created : " + idNewJiraTicket);
+
+                                log.info("JIRA comments : " + jsonJiraComments);
+                                //Queue<String> commentsQueue = new LinkedList<String>();
+                                LinkedList<String> commentsLinkedList = new LinkedList<String>();
+
+                                for(int i=0 ; i < jsonJiraComments.size() ; i++){
+                                    commentsLinkedList.add(jsonJiraComments.get(i).toString());
+                                    //mail.append("<br />commentaires = ")
+                                    //        .append(escapeHtml4((String)comm.get(i)));
+                                }
+
+                                sendJiraComments(idNewJiraTicket, commentsLinkedList, handler);
+
+                                //Faire une boucle pour créer les commentaires provenant du JSON, si il y a
+                                // test si champs commentaire vide
+                                // si non vide alors boucle par commentaire pour créer
+                                // voir si ils existent deja
+                                log.error("TOOTOO");
+
+                            }
+                        });
+
+                        //Get le number du ticket et ajouter chaque commentaires
+                        //http://10.83.199.17:8081/rest/api/2/issue/NGMDP-34/comment
+                        //{
+                        //    "body": "Lorem ipsum augue semper."
+                        //}
+
+                    } else {
+                        log.error("Error when calling URL : " + response.statusMessage());
+                        //renderError(request);
+                    }
+
                 }
+            });
 
+            httpClientRequest.putHeader("Authorization", "Basic " + Base64.encodeBytes(authInfo.getBytes()));
+            httpClientRequest.putHeader("Content-Type", "application/json");
+            httpClientRequest.setChunked(true);
+            httpClientRequest.write(jsonJiraTicket.encode());
+
+            if (!responseIsSent.getAndSet(true)) {
+                httpClient.close();
+                log.info("On close");
             }
-        });
 
-        if (!responseIsSent.getAndSet(true)) {
-            httpClient.close();
-            log.debug("On close");
+            httpClientRequest.end();
+            log.info("On end");
         }
 
-        httpClientRequest.end();
-            log.debug("On end");
-        }
-
-
-        System.out.println("---- FIN QMER ----");
+        log.info("---- FIN QMER ----");
 
         //curl -D- -u "ISILOG":"isilog_17" -X POST -H "Content-Type: application/json" --data '{ "fields": {"project":{ "key": "NGMDP" },"summary": "REST test.","description": " REST API","issuetype": {"name": "Assistance" } }}' https://jira-preprod.gdapublic.fr/rest/api/2/issue/
 
@@ -447,6 +543,110 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 .setTrustAll(true)
                 .setSSL("https".equals(uri.getScheme()))
                 .setKeepAlive(false);
+    }
+
+    /**
+     * Send Jira Comments
+     * @param idJira arrayComments
+     */
+    private void sendJiraComments(String idJira, LinkedList commentsLinkedList, Handler handler) {
+        final AtomicBoolean responseIsSent = new AtomicBoolean(false);
+        //test
+        //JsonArray commentsTicket = arrayComments.getArray("commentaires");
+        //log.info("JIRA comments 2 : " + arrayComments);
+
+        //while comment linked list size >0 ... faire envoi dans JIRA sinon echo vide
+        while( commentsLinkedList.size() > 0 ) {
+            log.info(commentsLinkedList.size());
+            log.info(commentsLinkedList.getFirst());
+
+
+            // Login & Passwd Jira
+            String authInfo = new StringBuilder(this.JIRA_LOGIN)
+                    .append(":").append(JIRA_PASSWD).toString();
+
+
+
+            URI jira_add_comment_URI = null;
+            try {
+                final String JIRA_LINK_URL_NEW_TICKET = new StringBuilder(this.JIRA_LINK_URL)
+                        .append(idJira)
+                        .append("/comment").toString();
+                jira_add_comment_URI = new URI(JIRA_LINK_URL_NEW_TICKET);
+            } catch (URISyntaxException e) {
+                log.error("Invalid jira web service uri", e);
+                //renderError(request);
+            }
+
+            if (jira_add_comment_URI != null) {
+                final HttpClient httpClient = generateHttpClient(jira_add_comment_URI);
+
+                final HttpClientRequest httpClientRequest = httpClient.post(JIRA_LINK_URL  , new Handler<HttpClientResponse>() {
+                    @Override
+                    public void handle(HttpClientResponse response) {
+
+                        System.out.println("On test le status :" + response.statusCode());
+                        int status = response.statusCode();
+
+
+                        // Si le ticket a bien été créé dans JIRA
+                        // HTTP Status Code 201: The request has been fulfilled and has resulted in one or more new resources being created.
+                        if (response.statusCode() == 201) {
+                            System.out.println("Test OK status 201 !");
+
+                            //Récupère le retour
+                            response.bodyHandler(new Handler<Buffer>() {
+                                @Override
+                                public void handle(Buffer buffer) {
+                                    //Affiche le retour
+                                    JsonObject infoNewJiraTicket = new JsonObject(buffer.toString());
+
+                                    log.info("JIRA ticket Informations : " + infoNewJiraTicket);
+
+                                    log.error("TOOTOO");
+
+                                }
+                            });
+
+                            //Get le number du ticket et ajouter chaque commentaires
+                            //http://10.83.199.17:8081/rest/api/2/issue/NGMDP-34/comment
+                            //{
+                            //    "body": "Lorem ipsum augue semper."
+                            //}
+
+                        } else {
+                            log.error("Error when calling URL : " + response.statusMessage());
+                            //renderError(request);
+                        }
+
+                    }
+                });
+
+                httpClientRequest.putHeader("Authorization", "Basic " + Base64.encodeBytes(authInfo.getBytes()));
+                httpClientRequest.putHeader("Content-Type", "application/json");
+                httpClientRequest.setChunked(true);
+
+                String comment = commentsLinkedList.getFirst().toString();
+                httpClientRequest.write(comment);
+
+                if (!responseIsSent.getAndSet(true)) {
+                    httpClient.close();
+                    log.info("On close");
+                }
+
+                httpClientRequest.end();
+                log.info("On end");
+            }
+
+            }
+
+
+
+
+            commentsLinkedList.removeFirst();
+            sendJiraComments(idJira, commentsLinkedList, handler);
+        }
+
     }
 
 }

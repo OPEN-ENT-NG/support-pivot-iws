@@ -33,7 +33,7 @@ import java.util.Map;
  * /testMail/:mail : Send a test mail to address in parameter
  * /demandeENT : Register a demande from Support module
  */
-class SupportController extends ControllerHelper{
+public class SupportController extends ControllerHelper{
 
     private DemandeService demandeService;
 
@@ -43,7 +43,7 @@ class SupportController extends ControllerHelper{
         super.init(vertx, container, rm, securedActions);
         EmailFactory emailFactory = new EmailFactory(vertx, container, container.config());
         EmailSender emailSender = emailFactory.getSender();
-        this.demandeService = new DefaultDemandeServiceImpl(container, emailSender);
+        this.demandeService = new DefaultDemandeServiceImpl(vertx, container, emailSender);
     }
 
     /**

@@ -18,6 +18,9 @@
 		"default-attribution" : "IWS",
 		"default-tickettype" : "Assistance",
 		"default-priority" : "Mineure",
-        "mail-iws" : "thomas.coleno@cgi.com"
+        "mail-iws" : "thomas.coleno@cgi.com",
+        "jira-login" : "ISILOG",
+        "jira-passwd" : "isilog_17",
+        "jira-link" : "https://entsupport.gdapublic.fr/rest/api/2/issue/"
       }
     }
