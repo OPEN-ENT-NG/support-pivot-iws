@@ -6,6 +6,7 @@ import fr.wseduc.mongodb.MongoDb;
 import fr.wseduc.webutils.Either;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.Vertx;
+import org.vertx.java.core.eventbus.EventBus;
 import org.vertx.java.core.eventbus.Message;
 import org.vertx.java.core.http.*;
 import org.vertx.java.core.json.JsonArray;
@@ -28,6 +29,8 @@ import java.net.URISyntaxException;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static fr.wseduc.webutils.Server.getEventBus;
+
 /**
  * Created by colenot on 07/12/2017.
  *
@@ -40,6 +43,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private final EmailSender emailSender;
     private final Logger log;
     private final Vertx vertx;
+
+    private final EventBus eb;
 
     private final String MAIL_IWS;
     private final String COLLECTIVITY_DEFAULT;
@@ -54,11 +59,15 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private final String authInfo;
     private final String urlJiraFinal;
 
+    private static final String ENT_TRACKERUPDATE_ADDRESS = "support.update.bugtracker";
+
+
     public DefaultDemandeServiceImpl(Vertx vertx, Container container, EmailSender emailSender) {
         this.mongo = MongoDb.getInstance();
         this.emailSender = emailSender;
         this.log = container.logger();
         this.vertx = vertx;
+        eb = getEventBus(vertx);
         this.MAIL_IWS = container.config().getString("mail-iws");
         this.COLLECTIVITY_DEFAULT = container.config().getString("default-collectivity");
         this.ATTRIBUTION_DEFAULT = container.config().getString("default-attribution");
@@ -185,27 +194,50 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      */
     private void add(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        if( Supportpivot.ATTRIBUTION_IWS.equals(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD)) ) {
-            sendToIWS(request, jsonPivot, handler);
-        }
-        else if( Supportpivot.ATTRIBUTION_CGI.equals(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD)) ) {
-            sendToCGI(request, jsonPivot, handler);
-        }
-        else {
-            mongo.insert(DEMANDE_COLLECTION, jsonPivot, new Handler<Message<JsonObject>>() {
-                @Override
-                public void handle(Message<JsonObject> retourJson) {
-                    JsonObject body = retourJson.body();
-                    if ("ok".equals(body.getString("status"))) {
-                        handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
-                    } else {
-                        handler.handle(new Either.Left<String, JsonObject>("1"));
+        switch(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD)) {
+            case Supportpivot.ATTRIBUTION_IWS:
+                sendToIWS(request, jsonPivot, handler);
+                break;
+            case Supportpivot.ATTRIBUTION_ENT:
+                sendToENT(request, jsonPivot, handler);
+                break;
+            case Supportpivot.ATTRIBUTION_CGI:
+                sendToCGI(request, jsonPivot, handler);
+                break
+            default:
+                mongo.insert(DEMANDE_COLLECTION, jsonPivot, new Handler<Message<JsonObject>>() {
+                    @Override
+                    public void handle(Message<JsonObject> retourJson) {
+                        JsonObject body = retourJson.body();
+                        if ("ok".equals(body.getString("status"))) {
+                            handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
+                        } else {
+                            handler.handle(new Either.Left<String, JsonObject>("1"));
+                        }
                     }
-                }
-            });
+                });
         }
     }
 
+
+    /**
+     * Send pivot information to ENT -- using internal bus
+     * @param jsonPivot JSON in pivot format
+     */
+    private void sendToENT(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
+        eb.send(ENT_TRACKERUPDATE_ADDRESS,
+                new JsonObject().putString("action", "create").putObject("issue", jsonPivot),
+                new Handler<Message<JsonObject>>() {
+                    @Override
+                    public void handle(Message<JsonObject> message) {
+                        if("OK".equals(message.body().getString("status"))) {
+                            handler.handle(new Either.Right<String, JsonObject>(message.body()));
+                        } else {
+                            handler.handle(new Either.Left<String, JsonObject>(message.body().toString()));
+                        }
+                    }
+                });
+    }
 
     /**
      * Send pivot information from IWS -- to Jira
@@ -323,30 +355,30 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
         StringBuilder mail = new StringBuilder()
             .append("collectivite = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD)))
+            .append(jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD))
             .append("<br />academie = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.ACADEMY_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.ACADEMY_FIELD, ""))
             .append("<br />demandeur = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.CREATOR_FIELD)))
+            .append(jsonPivot.getString(Supportpivot.CREATOR_FIELD))
             .append("<br />type_demande = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD, ""))
             .append("<br />titre = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.TITLE_FIELD)))
+            .append(jsonPivot.getString(Supportpivot.TITLE_FIELD))
             .append("<br />description = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD)))
+            .append(jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD))
             .append("<br />priorite = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.PRIORITY_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.PRIORITY_FIELD, ""))
             .append("<br />id_jira = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.IDJIRA_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.IDJIRA_FIELD, ""))
             .append("<br />id_ent = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.IDENT_FIELD)))
+            .append(jsonPivot.getString(Supportpivot.IDENT_FIELD))
             .append("<br />id_iws = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.IDIWS_FIELD, "")));
+            .append(jsonPivot.getString(Supportpivot.IDIWS_FIELD, ""));
 
         JsonArray comm = jsonPivot.getArray(Supportpivot.COMM_FIELD, new JsonArray());
         for(int i=0 ; i<comm.size();i++){
             mail.append("<br />commentaires = ")
-                    .append(escapeHtml4((String)comm.get(i)));
+                    .append((String)comm.get(i));
         }
 
         JsonArray modules =   jsonPivot.getArray(Supportpivot.MODULES_FIELD, new JsonArray());
@@ -355,28 +387,28 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             if(i > 0) {
                 mail.append(", ");
             }
-            mail.append(escapeHtml4((String)modules.get(i)));
+            mail.append((String)modules.get(i));
         }
         mail.append("<br />statut_iws = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.STATUSIWS_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.STATUSIWS_FIELD, ""))
             .append("<br />statut_ent = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.STATUSENT_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.STATUSENT_FIELD, ""))
             .append("<br />statut_jira = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.STATUSJIRA_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.STATUSJIRA_FIELD, ""))
             .append("<br />date_creation = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_CREA_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.DATE_CREA_FIELD, ""))
             .append("<br />date_resolution_iws = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_RESOIWS_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.DATE_RESOIWS_FIELD, ""))
             .append("<br />date_resolution_ent = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_RESOENT_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.DATE_RESOENT_FIELD, ""))
             .append("<br />date_resolution_jira = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.DATE_RESOJIRA_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.DATE_RESOJIRA_FIELD, ""))
             .append("<br />reponse_technique = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.TECHNICAL_RESP_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.TECHNICAL_RESP_FIELD, ""))
             .append("<br />reponse_client = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.CLIENT_RESP_FIELD, "")))
+            .append(jsonPivot.getString(Supportpivot.CLIENT_RESP_FIELD, ""))
             .append("<br />attribution = ")
-            .append(escapeHtml4(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD)));
+            .append(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD));
 
         String mailTo = jsonPivot.getString("email");
         if( mailTo == null || mailTo.isEmpty() ) {
