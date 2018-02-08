@@ -19,8 +19,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import static org.apache.commons.lang3.StringEscapeUtils.escapeHtml4;
-
 import org.vertx.java.core.buffer.Buffer;
 import org.vertx.java.core.http.HttpServerRequest;
 import org.vertx.java.core.json.impl.Base64;
@@ -51,11 +49,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private final String ATTRIBUTION_DEFAULT;
     private final String TICKETTYPE_DEFAULT;
     private final String PRIORITY_DEFAULT;
-    private final String JIRA_LOGIN;
-    private final String JIRA_PASSWD;
     private final String JIRA_HOST;
-    private final int JIRA_PORT;
-    private final String JIRA_URL;
     private final String authInfo;
     private final String urlJiraFinal;
 
@@ -73,16 +67,16 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         this.ATTRIBUTION_DEFAULT = container.config().getString("default-attribution");
         this.TICKETTYPE_DEFAULT = container.config().getString("default-tickettype");
         this.PRIORITY_DEFAULT = container.config().getString("default-priority");
-        this.JIRA_LOGIN = container.config().getString("jira-login");
-        this.JIRA_PASSWD = container.config().getString("jira-passwd");
+        String jiraLogin = container.config().getString("jira-login");
+        String jiraPassword = container.config().getString("jira-passwd");
         this.JIRA_HOST = container.config().getString("jira-host");
-        this.JIRA_URL = container.config().getString("jira-url");
-        this.JIRA_PORT = container.config().getInteger("jira-port");
+        String jiraUrl = container.config().getString("jira-url");
+        int jiraPort = container.config().getInteger("jira-port");
 
         // Login & Passwd Jira
-        authInfo = JIRA_LOGIN + ":" + JIRA_PASSWD;
+        authInfo = jiraLogin + ":" + jiraPassword;
         // Final url Jira
-        urlJiraFinal = JIRA_HOST + ":" + JIRA_PORT + JIRA_URL;
+        urlJiraFinal = JIRA_HOST + ":" + jiraPort + jiraUrl;
 
     }
 
@@ -199,11 +193,11 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 sendToIWS(request, jsonPivot, handler);
                 break;
             case Supportpivot.ATTRIBUTION_ENT:
-                sendToENT(request, jsonPivot, handler);
+                sendToENT(jsonPivot, handler);
                 break;
             case Supportpivot.ATTRIBUTION_CGI:
-                sendToCGI(request, jsonPivot, handler);
-                break
+                sendToCGI(jsonPivot, handler);
+                break;
             default:
                 mongo.insert(DEMANDE_COLLECTION, jsonPivot, new Handler<Message<JsonObject>>() {
                     @Override
@@ -224,7 +218,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * Send pivot information to ENT -- using internal bus
      * @param jsonPivot JSON in pivot format
      */
-    private void sendToENT(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
+    private void sendToENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
         eb.send(ENT_TRACKERUPDATE_ADDRESS,
                 new JsonObject().putString("action", "create").putObject("issue", jsonPivot),
                 new Handler<Message<JsonObject>>() {
@@ -244,7 +238,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * A ticket is created with the Jira API with all the json information received
      * @param jsonPivot JSON in pivot format
      */
-    private void sendToCGI(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
+    private void sendToCGI(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
         final AtomicBoolean responseIsSent = new AtomicBoolean(false);
         final JsonObject jsonJiraTicket = new JsonObject();
@@ -277,7 +271,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
         // Create ticket via Jira API
 
-        URI jira_URI = null;
+        URI jira_URI;
         try {
             jira_URI = new URI(urlJiraFinal);
         } catch (URISyntaxException e) {
@@ -324,7 +318,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                             log.debug("JIRA ticket Informations : " + infoNewJiraTicket);
                             log.debug("JIRA ticket ID created : " + idNewJiraTicket);
 
-                            LinkedList<String> commentsLinkedList = new LinkedList<String>();
+                            LinkedList<String> commentsLinkedList = new LinkedList<>();
 
                             if ( jsonJiraComments != null ) {
                                 for( Object comment : jsonJiraComments ) {
@@ -496,9 +490,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
             URI jira_add_comment_URI = null;
 
-            final String urlNewTicket = new StringBuilder(urlJiraFinal)
-                    .append(idJira)
-                    .append("/comment").toString();
+            final String urlNewTicket = urlJiraFinal + idJira + "/comment";
 
             try {
                 jira_add_comment_URI = new URI(urlNewTicket);
@@ -515,15 +507,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                     public void handle(HttpClientResponse response) {
 
                         // If ticket well created, then HTTP Status Code 201: The request has been fulfilled and has resulted in one or more new resources being created.
-                        if (response.statusCode() == 201) {
-                            response.bodyHandler(new Handler<Buffer>() {
-                                @Override
-                                public void handle(Buffer buffer) {
-                                    JsonObject infoNewJiraComment = new JsonObject(buffer.toString());
-                                }
-                            });
-
-                        } else {
+                        if (response.statusCode() != 201) {
                             log.error("Error when calling URL : " + response.statusMessage());
                         }
                         //Recursive call
