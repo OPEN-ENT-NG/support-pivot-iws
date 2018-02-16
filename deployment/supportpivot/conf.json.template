@@ -24,5 +24,15 @@
         "jira-host" : "https://entsupport.gdapublic.fr",
         "jira-url" : "/rest/api/2/issue/",
         "jira-port" : 80,
+        "jira-custom-fields" : {
+            "id_ent" : "customfield_12600",
+            "id_iws" : "customfield_12400",
+            "status_ent" : "customfield_12602",
+            "status_iws" : "customfield_12601",
+            "creation" : "customfield_12608",
+            "resolution_ent" : "customfield_12606",
+            "resolution_iws" : "customfield_12605",
+            "creator" : "customfield_11405"
+        }
       }
     }
