@@ -19,7 +19,12 @@ import org.vertx.java.platform.Container;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.text.Format;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.regex.Pattern;
 
 /**
  * Created by mercierq on 09/02/2018.
@@ -75,7 +80,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
         if (!jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty()) {
             String jiraTicketId = jsonPivot.getString(Supportpivot.IDJIRA_FIELD);
-            updateJiraInformations(jsonPivot, jiraTicketId, handler);
+            getJiraTicketContents(jsonPivot, jiraTicketId, handler);
         } else {
             final JsonObject jsonJiraTicket = new JsonObject();
 
@@ -244,14 +249,64 @@ public class DefaultJiraServiceImpl implements JiraService {
                 .setKeepAlive(false);
     }
 
+
+
+
+    /**
+     * Get general ticket information via Jira API
+     */
+    private void getJiraTicketContents(final JsonObject jsonPivot, final String jiraTicketId,
+                                       final Handler<Either<String, JsonObject>> handler) {
+
+        URI jira_get_infos_URI = null;
+        final String urlGetTicketGeneralInfo = urlJiraFinal + jiraTicketId ;
+
+        try {
+            jira_get_infos_URI = new URI(urlGetTicketGeneralInfo);
+        } catch (URISyntaxException e) {
+            log.error("Invalid jira web service uri", e);
+            handler.handle(new Either.Left<String, JsonObject>("Invalid jira url : " + urlGetTicketGeneralInfo));
+        }
+
+        final HttpClient httpClient = generateHttpClient(jira_get_infos_URI);
+
+        final HttpClientRequest httpClientRequestGetInfo = httpClient.get(urlGetTicketGeneralInfo, new Handler<HttpClientResponse>() {
+            @Override
+            public void handle(HttpClientResponse response) {
+                processJiraInfo(response, jsonPivot, jiraTicketId, handler);
+            }
+        });
+
+        httpClientRequestGetInfo.putHeader("Authorization", "Basic " + Base64.encodeBytes(jiraAuthInfo.getBytes()));
+        httpClient.close();
+        httpClientRequestGetInfo.end();
+
+    }
+
+    private void processJiraInfo(HttpClientResponse response, final JsonObject jsonPivot, final String jiraTicketId,
+                                 final Handler<Either<String, JsonObject>> handler) {
+        if (response.statusCode() == 200) {
+            response.bodyHandler(new Handler<Buffer>() {
+                @Override
+                public void handle(Buffer bufferGetInfosTicket) {
+                    JsonObject jsonGetInfosTicket = new JsonObject(bufferGetInfosTicket.toString());
+                    updateJiraInformations(jiraTicketId, jsonPivot, jsonGetInfosTicket, handler);
+                }
+            });
+        } else {
+            log.error("Error when calling URL : " + response.statusMessage());
+            handler.handle(new Either.Left<String, JsonObject>("Error when getting Jira ticket information"));
+        }
+    }
+
+
     /**
      * Update ticket information via Jira API
      */
-    private void updateJiraInformations (final JsonObject jsonPivot, final String jiraTicketId,
+    private void updateJiraInformations (final String jiraTicketId, final JsonObject jsonPivot, final JsonObject jsonCurrentTicketInfos,
                                          final Handler<Either<String, JsonObject>> handler) {
 
-
-        final String urlChangeTransitionTicket = urlJiraFinal + jiraTicketId;
+        final String urlUpdateJiraTicket = urlJiraFinal + jiraTicketId;
 
         final JsonObject jsonJiraUpdateTicket = new JsonObject();
         jsonJiraUpdateTicket.putObject("fields", new JsonObject()
@@ -262,7 +317,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
         URI jira_update_infos_URI;
         try {
-            jira_update_infos_URI = new URI(urlChangeTransitionTicket);
+            jira_update_infos_URI = new URI(urlUpdateJiraTicket);
         } catch (URISyntaxException e) {
             log.error("Invalid jira web service uri", e);
             handler.handle(new Either.Left<String, JsonObject>("Invalid jira url"));
@@ -272,15 +327,33 @@ public class DefaultJiraServiceImpl implements JiraService {
         final HttpClient httpClient = generateHttpClient(jira_update_infos_URI);
 
 
-        final HttpClientRequest httpClientRequest = httpClient.put(urlChangeTransitionTicket , new Handler<HttpClientResponse>() {
+        final HttpClientRequest httpClientRequest = httpClient.put(urlUpdateJiraTicket , new Handler<HttpClientResponse>() {
             @Override
             public void handle(HttpClientResponse response) {
-                if (response.statusCode() != 204) {
-                    log.error("Error when calling URL : " + response.statusMessage());
-                    handler.handle(new Either.Left<String, JsonObject>("Error when update Jira ticket information"));
+                if (response.statusCode() == 204) {
+
+                    // Compare comments and add only new ones
+                    JsonArray jsonPivotTicketComments = jsonPivot.getArray("commentaires");
+                    JsonArray jsonCurrentTicketComments = jsonCurrentTicketInfos.getObject("fields").getObject("comment").getArray("comments");
+
+                    JsonArray newComments = compareComments(jsonCurrentTicketComments, jsonPivotTicketComments);
+
+                    LinkedList<String> commentsLinkedList = new LinkedList<>();
+
+                    if ( newComments != null ) {
+                        for( Object comment : newComments ) {
+                            commentsLinkedList.add(comment.toString());
+                        }
+                        sendJiraComments(jiraTicketId, commentsLinkedList, handler);
+                    }
+                    else {
+                        handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
+                    }
+
                 }
                 else {
-                    handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
+                    log.error("Error when calling URL : " + response.statusMessage());
+                    handler.handle(new Either.Left<String, JsonObject>("Error when update Jira ticket information"));
                 }
             }
         });
@@ -297,6 +370,112 @@ public class DefaultJiraServiceImpl implements JiraService {
 
     }
 
+
+
+    /**
+     * Transform a comment from pivot format, to json
+     * @param comment Original full '|' separated string
+     * @return JsonFormat with correct metadata (owner and date)
+     */
+    private JsonObject unserializeComment(String comment) {
+        try{
+            String[] elements = comment.split(Pattern.quote("|"));
+            if(elements.length < 4) {
+                return null;
+            }
+            JsonObject jsonComment = new JsonObject();
+            jsonComment.putString("id", elements[0].trim());
+            jsonComment.putString("owner", elements[1].trim());
+            jsonComment.putString("created", elements[2].trim());
+            StringBuilder content = new StringBuilder();
+            for(int i = 3; i<elements.length ; i++) {
+                content.append(elements[i]);
+                content.append("|");
+            }
+            content.deleteCharAt(content.length() - 1);
+            jsonComment.putString("content", content.toString());
+            return jsonComment;
+        } catch (NullPointerException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Format date from SQL format : yyyy-MM-dd'T'HH:mm:ss
+     * to pivot comment id format : yyyyMMddHHmmss
+     * or display format : yyyy-MM-dd HH:mm:ss
+     * @param sqlDate date string to format
+     * @return formatted date string
+     */
+    private String getDateFormatted (final String sqlDate) {
+        final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+        //df.setTimeZone(TimeZone.getTimeZone("GMT"));
+        Date d;
+        try {
+            d = df.parse(sqlDate);
+        } catch (ParseException e) {
+            log.error("Support : error when parsing date");
+            e.printStackTrace();
+            return "iderror";
+        }
+        Format formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        return formatter.format(d);
+    }
+
+    /**
+     * Compare comments of ticket and bugtracker issue.
+     * Add every comment to ticket not already existing
+     * @param ticketJiraComments comments of Jira ticket
+     * @param issuePivotComments comment of Bugtracker issue
+     * @return comments that needs to be added in ticket
+     */
+    private JsonArray compareComments(JsonArray ticketJiraComments, JsonArray issuePivotComments) {
+        JsonArray commentsToAdd = new JsonArray();
+        for(Object oi : issuePivotComments)  {
+            if( !(oi instanceof String) ) continue;
+            String rawComment = (String)oi;
+            JsonObject issueComment = unserializeComment(rawComment);
+            String issueCommentId;
+
+            if(issueComment != null && issueComment.containsField("id")) {
+                issueCommentId = issueComment.getString("id", "");
+            } else {
+                log.error("Support : Invalid comment : " + rawComment);
+                continue;
+            }
+
+            boolean existing = false;
+            for(Object ot : ticketJiraComments) {
+                if( !(ot instanceof JsonObject) ) continue;
+                JsonObject ticketComment = (JsonObject)ot;
+                String ticketCommentCreated = ticketComment.getString("created","").trim();
+                String ticketCommentId = getDateFormatted(ticketCommentCreated);
+                String ticketCommentContent = ticketComment.getString("body", "").trim();
+                JsonObject ticketCommentPivotContent = unserializeComment(ticketCommentContent);
+
+                String ticketCommentPivotId = "";
+                if( ticketCommentPivotContent != null ) {
+                    ticketCommentPivotId = ticketCommentPivotContent.getString("id");
+                }
+                if(issueCommentId.equals(ticketCommentId)
+                        || issueCommentId.equals(ticketCommentPivotId)) {
+                    existing = true;
+                    break;
+                }
+            }
+            if(!existing) {
+                commentsToAdd.addString(rawComment);
+            }
+        }
+        return commentsToAdd;
+    }
+
+
+
+
+
+
+
     /////////////////////////////////////////////////
     // BELOW CODE IS NOT ACTUALLY USED
     // ONLY FOR AUTOMATIC JIRA TRANSITION CHANGE
@@ -305,7 +484,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
     /**
      * Get general ticket information via Jira API
-     */
+     *
     private void getJiraTicketInformations(final JsonObject jsonPivot, final String jiraTicketId, final String iwsTicketStatus,
                                   final Handler<Either<String, JsonObject>> handler) {
 
@@ -363,7 +542,7 @@ public class DefaultJiraServiceImpl implements JiraService {
         httpClientRequestGetInfo.end();
 
     }
-
+*/
 
     /**
      * Get transition ticket information via Jira API
@@ -490,6 +669,7 @@ public class DefaultJiraServiceImpl implements JiraService {
     /**
      * Change the Jira transition to change de ticket's Status
      */
+
     private void changeJiraTransition(final JsonObject jsonPivot,
                                       final String idJira,
                                       final String nextNameTransition,
@@ -543,12 +723,12 @@ public class DefaultJiraServiceImpl implements JiraService {
                         }
                     });*/
 
-                    getJiraTicketInformations(jsonPivot, idJira, iwsTicketStatus, new Handler<Either<String, JsonObject>>() {
-                        @Override
-                        public void handle(Either<String, JsonObject> stringJsonObjectEither) {
+                    //getJiraTicketInformations(jsonPivot, idJira, iwsTicketStatus, new Handler<Either<String, JsonObject>>() {
+                        //@Override
+                        //public void handle(Either<String, JsonObject> stringJsonObjectEither) {
 
-                        }
-                    });
+                        //}
+                    //});
                 }
             }
         });
@@ -586,10 +766,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         httpClientRequestGetTI.end();
 
     }
-
-
-
-
 
 
 }
