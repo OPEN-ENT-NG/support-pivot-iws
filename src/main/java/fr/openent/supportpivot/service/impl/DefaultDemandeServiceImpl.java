@@ -58,7 +58,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         this.ATTRIBUTION_DEFAULT = container.config().getString("default-attribution");
         this.TICKETTYPE_DEFAULT = container.config().getString("default-tickettype");
         this.PRIORITY_DEFAULT = container.config().getString("default-priority");
-        this.jiraService = new DefaultJiraServiceImpl(vertx, container);
+        this.jiraService = new DefaultJiraServiceImpl(vertx, container, emailSender);
 
     }
 
@@ -338,6 +338,29 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         return new String(in.getBytes(), StandardCharsets.UTF_8);
     }
 
+
+    /**
+     * Send updated informations from a Jira ticket to IWS
+     * @param idJira idJira updated in Jira to send to IWS
+     */
+    @Override
+    public void updateJiraToIWS(final HttpServerRequest request,
+                                final String idJira,
+                                final Handler<Either<String, JsonObject>> handler) {
+
+        jiraService.getTicketUpdatedToIWS(request, idJira, new Handler<Either<String, JsonObject>>() {
+            @Override
+            public void handle(Either<String, JsonObject> stringJsonObjectEither) {
+                if (stringJsonObjectEither.isRight()) {
+                    sendToIWS(request, stringJsonObjectEither.right().getValue(), handler);
+                } else {
+                    handler.handle(new Either.Left<String, JsonObject>(
+                            "Error, the ticket has not been sent, it doesn't exist."));
+                }
+            }
+        });
+
+    }
 
 
 }

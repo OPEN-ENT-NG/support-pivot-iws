@@ -3,13 +3,12 @@ package fr.openent.supportpivot.service.impl;
 import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.service.JiraService;
 import fr.wseduc.webutils.Either;
+import fr.wseduc.webutils.email.EmailSender;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.Vertx;
 import org.vertx.java.core.buffer.Buffer;
-import org.vertx.java.core.http.HttpClient;
-import org.vertx.java.core.http.HttpClientRequest;
-import org.vertx.java.core.http.HttpClientResponse;
-import org.vertx.java.core.http.HttpHeaders;
+import org.vertx.java.core.eventbus.Message;
+import org.vertx.java.core.http.*;
 import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.json.impl.Base64;
@@ -38,12 +37,13 @@ public class DefaultJiraServiceImpl implements JiraService {
     private final String JIRA_HOST;
     private final String jiraAuthInfo;
     private final String urlJiraFinal;
-
+    private final EmailSender emailSender;
+    private final String MAIL_IWS;
 
     private final JsonObject JIRA_FIELD;
 
 
-    DefaultJiraServiceImpl(Vertx vertx, Container container) {
+    DefaultJiraServiceImpl(Vertx vertx, Container container, EmailSender emailSender) {
 
         this.log = container.logger();
         this.vertx = vertx;
@@ -60,6 +60,8 @@ public class DefaultJiraServiceImpl implements JiraService {
         jiraAuthInfo = jiraLogin + ":" + jiraPassword;
         urlJiraFinal = JIRA_HOST + ":" + jiraPort + jiraUrl;
 
+        this.emailSender = emailSender;
+        this.MAIL_IWS = container.config().getString("mail-iws");
     }
 
 
@@ -407,7 +409,7 @@ public class DefaultJiraServiceImpl implements JiraService {
      * @param sqlDate date string to format
      * @return formatted date string
      */
-    private String getDateFormatted (final String sqlDate) {
+    private String getDateFormatted (final String sqlDate, final boolean idStyle) {
         final DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         //df.setTimeZone(TimeZone.getTimeZone("GMT"));
         Date d;
@@ -418,7 +420,12 @@ public class DefaultJiraServiceImpl implements JiraService {
             e.printStackTrace();
             return "iderror";
         }
-        Format formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        Format formatter;
+        if(idStyle) {
+            formatter = new SimpleDateFormat("yyyyMMddHHmmss");
+        } else {
+            formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        }
         return formatter.format(d);
     }
 
@@ -449,7 +456,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                 if( !(ot instanceof JsonObject) ) continue;
                 JsonObject ticketComment = (JsonObject)ot;
                 String ticketCommentCreated = ticketComment.getString("created","").trim();
-                String ticketCommentId = getDateFormatted(ticketCommentCreated);
+                String ticketCommentId = getDateFormatted(ticketCommentCreated, true);
                 String ticketCommentContent = ticketComment.getString("body", "").trim();
                 JsonObject ticketCommentPivotContent = unserializeComment(ticketCommentContent);
 
@@ -473,6 +480,206 @@ public class DefaultJiraServiceImpl implements JiraService {
 
 
 
+    /**
+     * Send ticket informations to IWS when a Jira ticket has been modified
+     * @param jiraTicketId Jira ticket ID received from REST JIRA when ticket updated
+     */
+    public void getTicketUpdatedToIWS (final HttpServerRequest request, final String jiraTicketId,
+                                         final Handler<Either<String, JsonObject>> handler) {
+
+        URI jira_get_infos_URI = null;
+        final String urlGetTicketGeneralInfo = urlJiraFinal + jiraTicketId ;
+
+        try {
+            jira_get_infos_URI = new URI(urlGetTicketGeneralInfo);
+        } catch (URISyntaxException e) {
+            log.error("Invalid jira web service uri", e);
+            handler.handle(new Either.Left<String, JsonObject>("Invalid jira url : " + urlGetTicketGeneralInfo));
+        }
+
+        final HttpClient httpClient = generateHttpClient(jira_get_infos_URI);
+
+        final HttpClientRequest httpClientRequestGetInfo = httpClient.get(urlGetTicketGeneralInfo, new Handler<HttpClientResponse>() {
+            @Override
+            public void handle(HttpClientResponse response) {
+
+                if (response.statusCode() == 200) {
+                    response.bodyHandler(new Handler<Buffer>() {
+                        @Override
+                        public void handle(Buffer bufferGetInfosTicket) {
+                            JsonObject jsonGetInfosTicket = new JsonObject(bufferGetInfosTicket.toString());
+                            modifiedJiraJsonToIWS(request, jsonGetInfosTicket, handler);
+                        }
+                    });
+                } else {
+                    log.error("Error when calling URL : " + response.statusMessage());
+                    handler.handle(new Either.Left<String, JsonObject>("Error when getting Jira ticket information"));
+                }
+            }
+        });
+
+        httpClientRequestGetInfo.putHeader("Authorization", "Basic " + Base64.encodeBytes(jiraAuthInfo.getBytes()));
+        httpClient.close();
+        httpClientRequestGetInfo.end();
+
+    }
+
+
+    /**
+     * Modified Jira JSON to prepare to send the email to IWS
+     */
+    private void modifiedJiraJsonToIWS(HttpServerRequest request, final JsonObject jsonJiraTicketInfos,
+                                           final Handler<Either<String, JsonObject>> handler) {
+
+
+        if  (jsonJiraTicketInfos.getObject("fields").containsField(JIRA_FIELD.getString("id_iws"))
+            && jsonJiraTicketInfos.getObject("fields").getString(JIRA_FIELD.getString("id_iws")) != null) {
+                jsonJiraTicketToIWS(request, jsonJiraTicketInfos, handler);
+            } else {
+                handler.handle(new Either.Left<String, JsonObject>("Field " + JIRA_FIELD.getString("id_iws") + " does not exist."));
+            }
+    }
+
+
+
+    /**
+     * Create json pivot format information from JIRA to IWS -- by mail
+     * Every data must be htmlEncoded because of encoding / mails incompatibility
+     * @param jiraTicket JSON in JIRA format
+     */
+    private void jsonJiraTicketToIWS(HttpServerRequest request, JsonObject jiraTicket, final Handler<Either<String, JsonObject>> handler) {
+
+        JsonObject jsonPivot = new JsonObject()
+                .putString(Supportpivot.COLLECTIVITY_FIELD,
+                        jiraTicket.getObject("fields").getObject("project").getString("name"))
+                .putString(Supportpivot.ACADEMY_FIELD, "PARIS");
+
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creator")) != null) {
+            jsonPivot.putString(Supportpivot.CREATOR_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creator")));
+        } else {
+            jsonPivot.putString(Supportpivot.CREATOR_FIELD, "");
+        }
+
+        jsonPivot.putString(Supportpivot.TICKETTYPE_FIELD, jiraTicket.getObject("fields")
+                        .getObject("issuetype").getString("name"))
+                .putString(Supportpivot.TITLE_FIELD,
+                        jiraTicket.getObject("fields").getString("summary"));
+
+        if  (jiraTicket.getObject("fields").getString("description") != null) {
+            jsonPivot.putString(Supportpivot.DESCRIPTION_FIELD,
+                    jiraTicket.getObject("fields").getString("description"));
+        } else {
+            jsonPivot.putString(Supportpivot.DESCRIPTION_FIELD, "");
+        }
+
+        jsonPivot.putString(Supportpivot.PRIORITY_FIELD,
+                jiraTicket.getObject("fields").getObject("priority").getString("name"))
+
+                .putArray(Supportpivot.MODULES_FIELD, jiraTicket.getObject("fields").getArray("labels"))
+                .putString(Supportpivot.IDJIRA_FIELD, jiraTicket.getString("key"));
+
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("id_ent")) != null) {
+            jsonPivot.putString(Supportpivot.IDENT_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("id_ent")));
+        } else {
+            jsonPivot.putString(Supportpivot.IDENT_FIELD, "");
+        }
+
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("id_iws")) != null) {
+            jsonPivot.putString(Supportpivot.IDIWS_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("id_iws")));
+        }
+
+        JsonArray comm = jiraTicket.getObject("fields").getObject("comment")
+                .getArray("comments", new JsonArray());
+        JsonArray jsonCommentArray = new JsonArray();
+        for(int i=0 ; i<comm.size();i++){
+            JsonObject comment = comm.get(i);
+            String commentFormated = serializeComment(comment);
+            jsonCommentArray.addString(commentFormated);
+        }
+        jsonPivot.putArray(Supportpivot.COMM_FIELD, jsonCommentArray);
+
+
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("status_ent")) != null) {
+            jsonPivot.putString(Supportpivot.STATUSENT_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("status_ent")));
+        }
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("status_iws")) != null) {
+            jsonPivot.putString(Supportpivot.STATUSIWS_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("status_iws")));
+        }
+
+        jsonPivot.putString(Supportpivot.STATUSJIRA_FIELD,
+                jiraTicket.getObject("fields").getObject("status").getString("name"));
+
+
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creation")) != null) {
+            jsonPivot.putString(Supportpivot.DATE_CREA_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creation")));
+        }
+
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("resolution_iws")) != null) {
+            jsonPivot.putString(Supportpivot.DATE_RESOIWS_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("resolution_iws")));
+        }
+
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("resolution_ent")) != null) {
+            jsonPivot.putString(Supportpivot.DATE_RESOENT_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("resolution_ent")));
+        }
+
+        if  (jiraTicket.getObject("fields").getString("resolutiondate") != null) {
+            jsonPivot.putString(Supportpivot.DATE_RESOJIRA_FIELD,
+                    jiraTicket.getObject("fields").getString("resolutiondate"));
+        }
+
+        jsonPivot.putString(Supportpivot.ATTRIBUTION_FIELD, "IWS");
+
+        handler.handle(new Either.Right<String, JsonObject>(jsonPivot));
+    }
+
+
+    /**
+     * Serialize comments : date | author | content
+     * @param comment Json Object with a comment to serialize
+     * @return String with comment serialized
+     */
+    private String serializeComment (final JsonObject comment) {
+        String content = getDateFormatted(comment.getString("created"), true)
+                + " | " + comment.getObject("author").getString("displayName")
+                + " | " + getDateFormatted(comment.getString("created"), false)
+                + " | " + comment.getString("body");
+
+        String origContent = comment.getString("body");
+
+        return hasToSerialize(origContent) ? content : origContent;
+    }
+
+    /**
+     * Check if comment must be serialized
+     * If it's '|' separated (at least 4 fields)
+     * And first field is 14 number (AAAMMJJHHmmSS)
+     * Then it must not be serialized
+     * @param content Comment to check
+     * @return true if the comment has to be serialized
+     */
+    private boolean hasToSerialize(String content) {
+        String[] elements = content.split(Pattern.quote("|"));
+        if(elements.length < 4) return true;
+        String id = elements[0].trim();
+        return ( !id.matches("[0-9]{14}") );
+    }
+
+    /**
+     * Encode a string in UTF-8
+     * @param in String to encode
+     * @return encoded String
+     */
+    private String stringEncode(String in) {
+        return new String(in.getBytes(), StandardCharsets.UTF_8);
+    }
 
 
 

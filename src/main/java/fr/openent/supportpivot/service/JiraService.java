@@ -2,6 +2,7 @@ package fr.openent.supportpivot.service;
 
 import fr.wseduc.webutils.Either;
 import org.vertx.java.core.Handler;
+import org.vertx.java.core.http.HttpServerRequest;
 import org.vertx.java.core.json.JsonObject;
 
 /**
@@ -17,4 +18,10 @@ public interface JiraService {
      * @param jsonPivot JSON object in PIVOT format
      */
     void sendToJIRA(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler);
+
+    /**
+     * Update issue from JIRA to IWS
+     * @param idJira String
+     */
+    void getTicketUpdatedToIWS(HttpServerRequest request, String idJira, final Handler<Either<String, JsonObject>> handler);
 }

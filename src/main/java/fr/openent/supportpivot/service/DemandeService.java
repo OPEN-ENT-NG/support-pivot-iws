@@ -33,4 +33,10 @@ public interface DemandeService {
      * @param mailTo mail to send to
      */
     void testMailToIWS(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler);
+
+    /**
+     * Send updated informations from a Jira ticket to IWS
+     * @param idJira idJira updated in Jira to sens to IWS
+     */
+    void updateJiraToIWS(HttpServerRequest request, String idJira, Handler<Either<String, JsonObject>> handler);
 }

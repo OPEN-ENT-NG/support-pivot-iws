@@ -112,4 +112,27 @@ public class SupportController extends ControllerHelper{
         final String mailTo = request.params().get("mail");
         demandeService.testMailToIWS(request, mailTo, getDefaultResponseHandler(request));
     }
+
+    /**
+     * Webservice. Send info updated from Jira to IWS
+     */
+    @Get("updateJira/:idjira")
+    public void udpateJira(final HttpServerRequest request) {
+        final String idJira = request.params().get("idjira");
+        demandeService.updateJiraToIWS(request, idJira, getDefaultResponseHandler(request));
+    }
+
+    /*
+    definir quand précisement on met a jour
+
+    griser le champs iws_id_ticket
+
+    URL : http://localhost:8090/supportpivot/updateJira/{{issueid}}
+    METHOD : GET
+    PARAMETERS : issueid = $issue.id(avoir?)
+
+
+    */
+
+
 }
