@@ -18,6 +18,8 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.vertx.java.core.http.HttpServerRequest;
 
@@ -47,7 +49,6 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
     private static final String ENT_TRACKERUPDATE_ADDRESS = "support.update.bugtracker";
 
-
     public DefaultDemandeServiceImpl(Vertx vertx, Container container, EmailSender emailSender) {
         this.mongo = MongoDb.getInstance();
         this.emailSender = emailSender;
@@ -59,7 +60,6 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         this.TICKETTYPE_DEFAULT = container.config().getString("default-tickettype");
         this.PRIORITY_DEFAULT = container.config().getString("default-priority");
         this.jiraService = new DefaultJiraServiceImpl(vertx, container, emailSender);
-
     }
 
     /**
@@ -140,9 +140,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * @return PIVOT-like module name encoded in UTF-8
      */
     private String moduleEntToPivot(String moduleName) {
-        switch(moduleName) {
-            case "actualites": return new String("Actualités".getBytes(), StandardCharsets.UTF_8);
-            default: return moduleName;
+        if (Supportpivot.applicationsMap.containsKey(moduleName)) {
+            return Supportpivot.applicationsMap.get(moduleName);
+        } else {
+            return "Autres";
         }
     }
 
