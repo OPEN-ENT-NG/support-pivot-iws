@@ -15,6 +15,8 @@
 	"supportpivot.contrib"					: "Contribution",
 	"supportpivot.read"						: "Lecture",
 
+	"supportpivot.ws.demande"				: "Mise à jour distante",
+
 	"unsetImage"										: "Supprimer l'image",
 
 	"group.Teacher"										: "Tous les enseignants du groupe {0}.",

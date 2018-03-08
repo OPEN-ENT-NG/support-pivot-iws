@@ -5,7 +5,7 @@ import fr.openent.supportpivot.service.impl.DefaultDemandeServiceImpl;
 import fr.wseduc.bus.BusAddress;
 import fr.wseduc.rs.Get;
 import fr.wseduc.rs.Post;
-import fr.wseduc.webutils.security.SecuredAction;
+import fr.wseduc.security.SecuredAction;
 import fr.wseduc.webutils.Either;
 import fr.wseduc.webutils.email.EmailSender;
 import fr.wseduc.webutils.http.Renders;
@@ -39,7 +39,7 @@ public class SupportController extends ControllerHelper{
 
     @Override
     public void init(Vertx vertx, final Container container, RouteMatcher rm,
-                     Map<String, SecuredAction> securedActions) {
+                     Map<String, fr.wseduc.webutils.security.SecuredAction> securedActions) {
         super.init(vertx, container, rm, securedActions);
         EmailFactory emailFactory = new EmailFactory(vertx, container, container.config());
         EmailSender emailSender = emailFactory.getSender();
@@ -50,6 +50,7 @@ public class SupportController extends ControllerHelper{
      * Webservice. Receive info from IWS
      */
     @Post("/demande")
+    @SecuredAction("supportpivot.ws.demande")
     public void demandeSupportIWS(final HttpServerRequest request) {
         RequestUtils.bodyToJson(request, new Handler<JsonObject>() {
             @Override
