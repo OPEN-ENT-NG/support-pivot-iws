@@ -227,58 +227,58 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         StringBuilder mail = new StringBuilder()
             .append("collectivite = ")
             .append(jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD))
-            .append("<br />academie = ")
+            .append("\nacademie = ")
             .append(jsonPivot.getString(Supportpivot.ACADEMY_FIELD, ""))
-            .append("<br />demandeur = ")
+            .append("\ndemandeur = ")
             .append(jsonPivot.getString(Supportpivot.CREATOR_FIELD))
-            .append("<br />type_demande = ")
+            .append("\ntype_demande = ")
             .append(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD, ""))
-            .append("<br />titre = ")
+            .append("\ntitre = ")
             .append(jsonPivot.getString(Supportpivot.TITLE_FIELD))
-            .append("<br />description = ")
+            .append("\ndescription = ")
             .append(jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD))
-            .append("<br />priorite = ")
+            .append("\npriorite = ")
             .append(jsonPivot.getString(Supportpivot.PRIORITY_FIELD, ""))
-            .append("<br />id_jira = ")
+            .append("\nid_jira = ")
             .append(jsonPivot.getString(Supportpivot.IDJIRA_FIELD, ""))
-            .append("<br />id_ent = ")
+            .append("\nid_ent = ")
             .append(jsonPivot.getString(Supportpivot.IDENT_FIELD))
-            .append("<br />id_iws = ")
+            .append("\nid_iws = ")
             .append(jsonPivot.getString(Supportpivot.IDIWS_FIELD, ""));
 
         JsonArray comm = jsonPivot.getArray(Supportpivot.COMM_FIELD, new JsonArray());
         for(int i=0 ; i<comm.size();i++){
-            mail.append("<br />commentaires = ")
+            mail.append("\ncommentaires = ")
                     .append((String)comm.get(i));
         }
 
         JsonArray modules =   jsonPivot.getArray(Supportpivot.MODULES_FIELD, new JsonArray());
-        mail.append("<br />modules = ");
+        mail.append("\nmodules = ");
         for(int i=0 ; i<modules.size();i++){
             if(i > 0) {
                 mail.append(", ");
             }
             mail.append((String)modules.get(i));
         }
-        mail.append("<br />statut_iws = ")
+        mail.append("\nstatut_iws = ")
             .append(jsonPivot.getString(Supportpivot.STATUSIWS_FIELD, ""))
-            .append("<br />statut_ent = ")
+            .append("\nstatut_ent = ")
             .append(jsonPivot.getString(Supportpivot.STATUSENT_FIELD, ""))
-            .append("<br />statut_jira = ")
+            .append("\nstatut_jira = ")
             .append(jsonPivot.getString(Supportpivot.STATUSJIRA_FIELD, ""))
-            .append("<br />date_creation = ")
+            .append("\ndate_creation = ")
             .append(jsonPivot.getString(Supportpivot.DATE_CREA_FIELD, ""))
-            .append("<br />date_resolution_iws = ")
+            .append("\ndate_resolution_iws = ")
             .append(jsonPivot.getString(Supportpivot.DATE_RESOIWS_FIELD, ""))
-            .append("<br />date_resolution_ent = ")
+            .append("\ndate_resolution_ent = ")
             .append(jsonPivot.getString(Supportpivot.DATE_RESOENT_FIELD, ""))
-            .append("<br />date_resolution_jira = ")
+            .append("\ndate_resolution_jira = ")
             .append(jsonPivot.getString(Supportpivot.DATE_RESOJIRA_FIELD, ""))
-            .append("<br />reponse_technique = ")
+            .append("\nreponse_technique = ")
             .append(jsonPivot.getString(Supportpivot.TECHNICAL_RESP_FIELD, ""))
-            .append("<br />reponse_client = ")
+            .append("\nreponse_client = ")
             .append(jsonPivot.getString(Supportpivot.CLIENT_RESP_FIELD, ""))
-            .append("<br />attribution = ")
+            .append("\nattribution = ")
             .append(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD));
 
         String mailTo = jsonPivot.getString("email");

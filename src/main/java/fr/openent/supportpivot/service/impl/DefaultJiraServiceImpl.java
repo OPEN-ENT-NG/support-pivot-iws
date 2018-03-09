@@ -37,8 +37,10 @@ public class DefaultJiraServiceImpl implements JiraService {
     private final String JIRA_HOST;
     private final String jiraAuthInfo;
     private final String urlJiraFinal;
-    private final EmailSender emailSender;
-    private final String MAIL_IWS;
+    private final String DEFAULT_COLLECTIVITY;
+    private final String DEFAULT_ATTRIBUTION;
+    private final String DEFAULT_TICKETTYPE;
+    private final String DEFAULT_PRIORITY;
 
     private final JsonObject JIRA_FIELD;
 
@@ -60,8 +62,12 @@ public class DefaultJiraServiceImpl implements JiraService {
         jiraAuthInfo = jiraLogin + ":" + jiraPassword;
         urlJiraFinal = JIRA_HOST + ":" + jiraPort + jiraUrl;
 
-        this.emailSender = emailSender;
-        this.MAIL_IWS = container.config().getString("mail-iws");
+        this.DEFAULT_COLLECTIVITY = container.config().getString("default-collectivity");
+        this.DEFAULT_ATTRIBUTION = container.config().getString("default-attribution");
+        this.DEFAULT_TICKETTYPE = container.config().getString("default-tickettype");
+        this.DEFAULT_PRIORITY = container.config().getString("default-priority");
+
+
     }
 
 
@@ -72,8 +78,7 @@ public class DefaultJiraServiceImpl implements JiraService {
      */
     public void sendToJIRA(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        String ticketType = "Assistance";
-
+        String ticketType = DEFAULT_TICKETTYPE;
         if (jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD).equals("Anomalie") ||
                 jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD).equals("Incident") ||
                 jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD).equals("Service")) {
@@ -86,9 +91,35 @@ public class DefaultJiraServiceImpl implements JiraService {
         } else {
             final JsonObject jsonJiraTicket = new JsonObject();
 
+            String currentPriority = jsonPivot.getString(Supportpivot.PRIORITY_FIELD);
+            switch(currentPriority) {
+                case "Mineur" :
+                    currentPriority = "Mineure";
+                    break;
+                case "Majeur":
+                    currentPriority = "Majeure";
+                    break;
+                case "Bloquant":
+                    currentPriority = "Bloquante";
+                    break;
+                default:
+                    currentPriority = DEFAULT_PRIORITY;
+                    break;
+            }
+
+            String currentCollectivite = jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD);
+            switch(currentCollectivite) {
+                case "MDP":
+                    currentCollectivite = "NGMDP";
+                    break;
+                default:
+                    currentCollectivite = "NGMDP";
+                    break;
+            }
+
             jsonJiraTicket.putObject("fields", new JsonObject()
                     .putObject("project", new JsonObject()
-                            .putString("key", jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD)))
+                            .putString("key", currentCollectivite))
                     .putString("summary", jsonPivot.getString(Supportpivot.TITLE_FIELD))
                     .putString("description", jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD))
                     .putObject("issuetype", new JsonObject()
@@ -103,7 +134,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                     .putString(JIRA_FIELD.getString("resolution_iws"), jsonPivot.getString(Supportpivot.DATE_RESOIWS_FIELD))
                     .putString(JIRA_FIELD.getString("creator"), jsonPivot.getString(Supportpivot.CREATOR_FIELD))
                     .putObject("priority", new JsonObject()
-                            .putString("name", jsonPivot.getString(Supportpivot.PRIORITY_FIELD))));
+                            .putString("name", currentPriority)));
 
             final JsonArray jsonJiraComments = jsonPivot.getArray(Supportpivot.COMM_FIELD);
 
@@ -549,14 +580,26 @@ public class DefaultJiraServiceImpl implements JiraService {
      */
     private void jsonJiraTicketToIWS(HttpServerRequest request, JsonObject jiraTicket, final Handler<Either<String, JsonObject>> handler) {
 
-        JsonObject jsonPivot = new JsonObject()
-                .putString(Supportpivot.COLLECTIVITY_FIELD,
-                        jiraTicket.getObject("fields").getObject("project").getString("name"))
-                .putString(Supportpivot.ACADEMY_FIELD, "PARIS");
+        JsonObject jsonPivot = new JsonObject();
+
+        String currentCollectivite = jiraTicket.getObject("fields").getObject("project").getString("name");
+        switch(currentCollectivite) {
+            case "NGMDP":
+                currentCollectivite = DEFAULT_COLLECTIVITY;
+                break;
+            default:
+                currentCollectivite = DEFAULT_COLLECTIVITY;
+                break;
+        }
+
+        jsonPivot.putString(Supportpivot.COLLECTIVITY_FIELD, currentCollectivite);
+
+        jsonPivot.putString(Supportpivot.ACADEMY_FIELD, "PARIS");
+
 
         if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creator")) != null) {
             jsonPivot.putString(Supportpivot.CREATOR_FIELD,
-                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creator")));
+                    jiraTicket.getObject("fields").getString(stringEncode(JIRA_FIELD.getString("creator"))));
         } else {
             jsonPivot.putString(Supportpivot.CREATOR_FIELD, "");
         }
@@ -573,11 +616,30 @@ public class DefaultJiraServiceImpl implements JiraService {
             jsonPivot.putString(Supportpivot.DESCRIPTION_FIELD, "");
         }
 
-        jsonPivot.putString(Supportpivot.PRIORITY_FIELD,
-                jiraTicket.getObject("fields").getObject("priority").getString("name"))
 
-                .putArray(Supportpivot.MODULES_FIELD, jiraTicket.getObject("fields").getArray("labels"))
-                .putString(Supportpivot.IDJIRA_FIELD, jiraTicket.getString("key"));
+        String currentPriority = jiraTicket.getObject("fields").getObject("priority").getString("name");
+        switch(currentPriority) {
+            case "Lowest":
+            case "Mineure":
+                currentPriority = "Mineur";
+                break;
+            case "High":
+            case "Majeure":
+                currentPriority = "Majeur";
+                break;
+            case "Highest":
+            case "Bloquante":
+                currentPriority = "Bloquant";
+                break;
+            default:
+                currentPriority = "Mineur";
+                break;
+        }
+
+        jsonPivot.putString(Supportpivot.PRIORITY_FIELD, currentPriority);
+
+        jsonPivot.putArray(Supportpivot.MODULES_FIELD,
+                jiraTicket.getObject("fields").getArray("labels")).putString(Supportpivot.IDJIRA_FIELD, jiraTicket.getString("key"));
 
         if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("id_ent")) != null) {
             jsonPivot.putString(Supportpivot.IDENT_FIELD,
