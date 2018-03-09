@@ -59,6 +59,16 @@ public class Supportpivot extends BaseServer {
             DESCRIPTION_FIELD
     };
 
+    public static final String STATUSENT_NEW = "1";
+    public static final String STATUSENT_OPENED = "2";
+    public static final String STATUSENT_RESOLVED = "3";
+    public static final String STATUSENT_CLOSED = "4";
+
+    public static final String STATUSPIVOT_NEW = "Ouvert";
+    public static final String STATUSPIVOT_OPENED = "En cours";
+    public static final String STATUSPIVOT_RESOLVED = "Résolu";
+    public static final String STATUSPIVOT_CLOSED = "Fermé";
+
 
     public final static Map<String, String> applicationsMap = new HashMap<String, String>()
     {
