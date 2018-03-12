@@ -10,7 +10,6 @@
         "ssl" : $ssl,
         "auto-redeploy": false,
         "userbook-host": "${host}",
-        "integration-mode" : "HTTP",
         "app-registry.port" : 8012,
         "mode" : "${mode}",
         "entcore.port" : 8009,
