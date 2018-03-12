@@ -260,6 +260,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 });
     }
 
+    private String safeField(String inField) {
+        if(inField == null) return null;
+        return inField.replace("="," =");
+    }
 
     /**
      * Send pivot information to IWS -- by mail
@@ -274,13 +278,13 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             .append("\nacademie= ")
             .append(jsonPivot.getString(Supportpivot.ACADEMY_FIELD, ""))
             .append("\ndemandeur= ")
-            .append(jsonPivot.getString(Supportpivot.CREATOR_FIELD))
+            .append(safeField(jsonPivot.getString(Supportpivot.CREATOR_FIELD)))
             .append("\ntype_demande= ")
             .append(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD, ""))
             .append("\ntitre= ")
-            .append(jsonPivot.getString(Supportpivot.TITLE_FIELD))
+            .append(safeField(jsonPivot.getString(Supportpivot.TITLE_FIELD)))
             .append("\ndescription= ")
-            .append(jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD))
+            .append(safeField(jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD)))
             .append("\npriorite= ")
             .append(jsonPivot.getString(Supportpivot.PRIORITY_FIELD, ""))
             .append("\nid_jira= ")
@@ -293,7 +297,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         JsonArray comm = jsonPivot.getArray(Supportpivot.COMM_FIELD, new JsonArray());
         for(int i=0 ; i<comm.size();i++){
             mail.append("\ncommentaires= ")
-                    .append((String)comm.get(i));
+                    .append(safeField((String)comm.get(i)));
         }
 
         JsonArray modules =   jsonPivot.getArray(Supportpivot.MODULES_FIELD, new JsonArray());
@@ -319,9 +323,9 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             .append("\ndate_resolution_jira= ")
             .append(jsonPivot.getString(Supportpivot.DATE_RESOJIRA_FIELD, ""))
             .append("\nreponse_technique= ")
-            .append(jsonPivot.getString(Supportpivot.TECHNICAL_RESP_FIELD, ""))
+            .append(safeField(jsonPivot.getString(Supportpivot.TECHNICAL_RESP_FIELD, "")))
             .append("\nreponse_client= ")
-            .append(jsonPivot.getString(Supportpivot.CLIENT_RESP_FIELD, ""))
+            .append(safeField(jsonPivot.getString(Supportpivot.CLIENT_RESP_FIELD, "")))
             .append("\nattribution= ")
             .append(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD));
 
