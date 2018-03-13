@@ -96,7 +96,7 @@ public class SupportController extends ControllerHelper{
                             .putString("message", "invalid.action")
                             .putObject("issue", issue));
                 } else {
-                    log.error("Supportpivot : error when trying to add ENT issue");
+                    log.error("Supportpivot : error when trying send ticket from ENT");
                     message.reply(new JsonObject().putString("status", "ko")
                         .putString("message", event.left().getValue()));
                 }
@@ -122,18 +122,6 @@ public class SupportController extends ControllerHelper{
         final String idJira = request.params().get("idjira");
         demandeService.updateJiraToIWS(request, idJira, getDefaultResponseHandler(request));
     }
-
-    /*
-    definir quand précisement on met a jour
-
-    griser le champs iws_id_ticket
-
-    URL : http://localhost:8090/supportpivot/updateJira/{{issueid}}
-    METHOD : GET
-    PARAMETERS : issueid = $issue.id(avoir?)
-
-
-    */
 
 
 }

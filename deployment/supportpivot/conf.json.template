@@ -14,7 +14,7 @@
         "mode" : "${mode}",
         "entcore.port" : 8009,
 		"default-collectivity" : "MDP",
-		"default-attribution" : "IWS",
+		"default-attribution" : "RECTORAT",
 		"default-tickettype" : "Assistance",
 		"default-priority" : "Mineure",
         "mail-iws" : "thomas.coleno@cgi.com",

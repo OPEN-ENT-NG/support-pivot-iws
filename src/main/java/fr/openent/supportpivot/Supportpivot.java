@@ -37,7 +37,7 @@ public class Supportpivot extends BaseServer {
     public final static String CLIENT_RESP_FIELD = "reponse_client";
     public final static String ATTRIBUTION_FIELD = "attribution";
 
-    public final static String ATTRIBUTION_IWS = "IWS";
+    public final static String ATTRIBUTION_IWS = "RECTORAT";
     public final static String ATTRIBUTION_ENT = "ENT";
     public final static String ATTRIBUTION_CGI = "CGI";
     /**

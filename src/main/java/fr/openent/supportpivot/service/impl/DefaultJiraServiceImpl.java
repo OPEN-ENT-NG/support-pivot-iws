@@ -86,19 +86,21 @@ public class DefaultJiraServiceImpl implements JiraService {
     public void sendToJIRA(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
         String ticketType = DEFAULT_TICKETTYPE;
-        if (jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD).equals("Anomalie") ||
-                jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD).equals("Incident") ||
-                jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD).equals("Service")) {
+        if (jsonPivot.containsField(Supportpivot.TICKETTYPE_FIELD)
+            && ("Anomalie".equals(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD)) ||
+                "Incident".equals(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD)) ||
+                "Service".equals(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD)))) {
             ticketType = jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD);
         }
 
-        if (!jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty()) {
+        if (jsonPivot.containsField(Supportpivot.IDJIRA_FIELD)
+            && !jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty()) {
             String jiraTicketId = jsonPivot.getString(Supportpivot.IDJIRA_FIELD);
             getJiraTicketContents(jsonPivot, jiraTicketId, handler);
         } else {
             final JsonObject jsonJiraTicket = new JsonObject();
 
-            String currentPriority = jsonPivot.getString(Supportpivot.PRIORITY_FIELD);
+            String currentPriority = jsonPivot.getString(Supportpivot.PRIORITY_FIELD, "");
             switch(currentPriority) {
                 case "Mineur" :
                     currentPriority = "Mineure";
@@ -721,7 +723,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                     jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("response_technical")));
         }
 
-        jsonPivot.putString(Supportpivot.ATTRIBUTION_FIELD, "IWS");
+        jsonPivot.putString(Supportpivot.ATTRIBUTION_FIELD, Supportpivot.ATTRIBUTION_IWS);
 
         handler.handle(new Either.Right<String, JsonObject>(jsonPivot));
     }
