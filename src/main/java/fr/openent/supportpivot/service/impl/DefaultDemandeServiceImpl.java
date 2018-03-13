@@ -58,7 +58,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         this.ATTRIBUTION_DEFAULT = container.config().getString("default-attribution");
         this.TICKETTYPE_DEFAULT = container.config().getString("default-tickettype");
         this.PRIORITY_DEFAULT = container.config().getString("default-priority");
-        this.jiraService = new DefaultJiraServiceImpl(vertx, container, emailSender);
+        this.jiraService = new DefaultJiraServiceImpl(vertx, container);
     }
 
     /**

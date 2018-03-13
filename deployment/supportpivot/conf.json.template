@@ -34,14 +34,14 @@
             "creator" : "customfield_11405",
             "response_technical" : "customfield_12609"
         }
-        "collection-MDP" : {
-            statutsJira {
-                "Ouvert" :['Nouveau', 'New', 'Open'],
-                "En cours" :['Ouvert'],
-                "Résolu" :['Résolu'],
-                "Fermé" :['Fermé']
-                "En attente" :['Ouvert', 'New', 'Open']
-            }
-        }
+    	"collection-MDP": {
+    		"statutsJira": {
+    			"Nouveau": ["Nouveau"],
+    			"Ouvert": ["En cours", "En attente"],
+    			"Résolu": ["Résolu sans livraison", "Résolu et à tester"],
+    			"Fermé": ["Fermé"],
+    			"Default": ["Ouvert"]
+    		}
+    	}
       }
     }
