@@ -10,7 +10,6 @@
         "ssl" : $ssl,
         "auto-redeploy": false,
         "userbook-host": "${host}",
-        "integration-mode" : "HTTP",
         "app-registry.port" : 8012,
         "mode" : "${mode}",
         "entcore.port" : 8009,
@@ -32,7 +31,17 @@
             "creation" : "customfield_12608",
             "resolution_ent" : "customfield_12606",
             "resolution_iws" : "customfield_12605",
-            "creator" : "customfield_11405"
+            "creator" : "customfield_11405",
+            "response_technical" : "customfield_12609"
+        }
+        "collection-MDP" : {
+            statutsJira {
+                "Ouvert" :['Nouveau', 'New', 'Open'],
+                "En cours" :['Ouvert'],
+                "Résolu" :['Résolu'],
+                "Fermé" :['Fermé']
+                "En attente" :['Ouvert', 'New', 'Open']
+            }
         }
       }
     }

@@ -12,6 +12,7 @@ import org.vertx.java.core.http.*;
 import org.vertx.java.core.json.JsonArray;
 import org.vertx.java.core.json.JsonObject;
 import org.vertx.java.core.json.impl.Base64;
+import org.vertx.java.core.json.impl.Json;
 import org.vertx.java.core.logging.Logger;
 import org.vertx.java.platform.Container;
 
@@ -37,6 +38,8 @@ public class DefaultJiraServiceImpl implements JiraService {
     private final String JIRA_HOST;
     private final String jiraAuthInfo;
     private final String urlJiraFinal;
+    private final EmailSender emailSender;
+    private final String MAIL_IWS;
     private final String DEFAULT_COLLECTIVITY;
     private final String DEFAULT_ATTRIBUTION;
     private final String DEFAULT_TICKETTYPE;
@@ -61,6 +64,10 @@ public class DefaultJiraServiceImpl implements JiraService {
 
         jiraAuthInfo = jiraLogin + ":" + jiraPassword;
         urlJiraFinal = JIRA_HOST + ":" + jiraPort + jiraUrl;
+
+        this.emailSender = emailSender;
+        this.MAIL_IWS = container.config().getString("mail-iws");
+
 
         this.DEFAULT_COLLECTIVITY = container.config().getString("default-collectivity");
         this.DEFAULT_ATTRIBUTION = container.config().getString("default-attribution");
@@ -153,7 +160,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
             final HttpClient httpClient = generateHttpClient(jira_URI);
 
-            final HttpClientRequest httpClientRequest = httpClient.post(urlJiraFinal, getJiraUpdateHandler(jsonJiraComments, handler))
+            final HttpClientRequest httpClientRequest = httpClient.post(urlJiraFinal, getJiraUpdateHandler(jsonPivot, jsonJiraComments, handler))
                     .putHeader(HttpHeaders.HOST, JIRA_HOST)
                     .putHeader("Authorization", "Basic " + Base64.encodeBytes(jiraAuthInfo.getBytes()))
                     .putHeader("Content-Type", "application/json")
@@ -166,7 +173,7 @@ public class DefaultJiraServiceImpl implements JiraService {
         }
     }
 
-    private Handler<HttpClientResponse> getJiraUpdateHandler(final JsonArray jsonJiraComments,
+    private Handler<HttpClientResponse> getJiraUpdateHandler(final JsonObject jsonPivot, final JsonArray jsonJiraComments,
                                                              final Handler<Either<String, JsonObject>> handler) {
         return new Handler<HttpClientResponse>() {
 
@@ -188,15 +195,22 @@ public class DefaultJiraServiceImpl implements JiraService {
 
                             LinkedList<String> commentsLinkedList = new LinkedList<>();
 
+                            jsonPivot.putString("id_jira", idNewJiraTicket);
+                            jsonPivot.putString("statut_jira", "Nouveau");
+
                             if ( jsonJiraComments != null ) {
                                 for( Object comment : jsonJiraComments ) {
                                     commentsLinkedList.add(comment.toString());
                                 }
-                                sendJiraComments( idNewJiraTicket, commentsLinkedList, handler);
+                                sendJiraComments(idNewJiraTicket, commentsLinkedList, jsonPivot, handler);
                             }
                             else {
-                                handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
+                                handler.handle(new Either.Right<String, JsonObject>(new JsonObject()
+                                        .putString("status", "OK")
+                                        .putObject("jsonPivotCompleted", jsonPivot)
+                                ));
                             }
+
                         }
                     });
 
@@ -213,7 +227,7 @@ public class DefaultJiraServiceImpl implements JiraService {
      * Send Jira Comments
      * @param idJira arrayComments
      */
-    private void sendJiraComments(final String idJira, final LinkedList commentsLinkedList,
+    private void sendJiraComments(final String idJira, final LinkedList commentsLinkedList, final JsonObject jsonPivot,
                                   final Handler<Either<String, JsonObject>> handler) {
 
         if( commentsLinkedList.size() > 0 ) {
@@ -242,7 +256,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                         }
                         //Recursive call
                         commentsLinkedList.removeFirst();
-                        sendJiraComments(idJira, commentsLinkedList, handler);
+                        sendJiraComments(idJira, commentsLinkedList, jsonPivot, handler);
                     }
                 });
                 httpClientRequest.putHeader(HttpHeaders.HOST, JIRA_HOST)
@@ -261,7 +275,10 @@ public class DefaultJiraServiceImpl implements JiraService {
 
 
         } else {
-            handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
+            handler.handle(new Either.Right<String, JsonObject>(new JsonObject()
+                    .putString("status", "OK")
+                    .putObject("jsonPivotCompleted", jsonPivot)
+            ));
         }
 
     }
@@ -377,7 +394,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                         for( Object comment : newComments ) {
                             commentsLinkedList.add(comment.toString());
                         }
-                        sendJiraComments(jiraTicketId, commentsLinkedList, handler);
+                        sendJiraComments(jiraTicketId, commentsLinkedList, jsonPivot, handler);
                     }
                     else {
                         handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
@@ -484,13 +501,12 @@ public class DefaultJiraServiceImpl implements JiraService {
 
             boolean existing = false;
             for(Object ot : ticketJiraComments) {
-                if( !(ot instanceof JsonObject) ) continue;
-                JsonObject ticketComment = (JsonObject)ot;
-                String ticketCommentCreated = ticketComment.getString("created","").trim();
+                if (!(ot instanceof JsonObject)) continue;
+                JsonObject ticketComment = (JsonObject) ot;
+                String ticketCommentCreated = ticketComment.getString("created", "").trim();
                 String ticketCommentId = getDateFormatted(ticketCommentCreated, true);
                 String ticketCommentContent = ticketComment.getString("body", "").trim();
                 JsonObject ticketCommentPivotContent = unserializeComment(ticketCommentContent);
-
                 String ticketCommentPivotId = "";
                 if( ticketCommentPivotContent != null ) {
                     ticketCommentPivotId = ticketCommentPivotContent.getString("id");
@@ -658,8 +674,11 @@ public class DefaultJiraServiceImpl implements JiraService {
         JsonArray jsonCommentArray = new JsonArray();
         for(int i=0 ; i<comm.size();i++){
             JsonObject comment = comm.get(i);
-            String commentFormated = serializeComment(comment);
-            jsonCommentArray.addString(commentFormated);
+            //Write only if the comment is public
+            if (! comment.containsField("visibility")) {
+                String commentFormated = serializeComment(comment);
+                jsonCommentArray.addString(commentFormated);
+            }
         }
         jsonPivot.putArray(Supportpivot.COMM_FIELD, jsonCommentArray);
 
@@ -697,6 +716,11 @@ public class DefaultJiraServiceImpl implements JiraService {
                     jiraTicket.getObject("fields").getString("resolutiondate"));
         }
 
+        if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("response_technical")) != null) {
+            jsonPivot.putString(Supportpivot.TECHNICAL_RESP_FIELD,
+                    jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("response_technical")));
+        }
+
         jsonPivot.putString(Supportpivot.ATTRIBUTION_FIELD, "IWS");
 
         handler.handle(new Either.Right<String, JsonObject>(jsonPivot));
@@ -709,6 +733,21 @@ public class DefaultJiraServiceImpl implements JiraService {
      * @return String with comment serialized
      */
     private String serializeComment (final JsonObject comment) {
+
+/*
+        if (comment.containsField("visibility")) {
+            if (comment.getObject("visibility").getString("value") == "Administrators" ||
+                    comment.getObject("visibility").getString("value") == "CGI Interne") {
+                String ticketCommentVisibility = comment.getObject("visibility").getString("value", "");
+                log.info("------------------------");
+                log.info(ticketCommentVisibility);
+                log.info("------------------------");
+            }
+        }*/
+
+
+
+
         String content = getDateFormatted(comment.getString("created"), true)
                 + " | " + comment.getObject("author").getString("displayName")
                 + " | " + getDateFormatted(comment.getString("created"), false)

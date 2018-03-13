@@ -192,7 +192,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * If no or unknown recipient, save it to mongo
      * @param jsonPivot Json in pivot format
      */
-    private void add(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
+    private void add(final HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
         switch(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD)) {
             case Supportpivot.ATTRIBUTION_IWS:
@@ -202,7 +202,28 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 sendToENT(jsonPivot, handler);
                 break;
             case Supportpivot.ATTRIBUTION_CGI:
-                jiraService.sendToJIRA(jsonPivot, handler);
+                //jiraService.sendToJIRA(jsonPivot, handler);
+                final boolean ticketExists = (jsonPivot.containsField(Supportpivot.IDJIRA_FIELD)
+                        && !jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty());
+
+                jiraService.sendToJIRA(jsonPivot, new Handler<Either<String, JsonObject>>() {
+                    @Override
+                    public void handle(Either<String, JsonObject> stringJsonObjectEither) {
+                        if (stringJsonObjectEither.isRight()) {
+                            if(!ticketExists) {
+                                sendToIWS(request,
+                                        stringJsonObjectEither.right().getValue().getObject("jsonPivotCompleted"),
+                                        handler);
+                            } else {
+                                handler.handle(new Either.Right<String, JsonObject>(new JsonObject().putString("status", "OK")));
+                            }
+                        } else {
+                            handler.handle(stringJsonObjectEither);
+                            //handler.handle(new Either.Left<String, JsonObject>(
+                            //        "Error, the ticket has not been sent, it doesn't exist."));
+                        }
+                    }
+                });
                 break;
             default:
                 mongo.insert(DEMANDE_COLLECTION, jsonPivot, new Handler<Message<JsonObject>>() {
