@@ -416,6 +416,14 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             mailTo = this.MAIL_IWS;
         }
 
+        JsonObject savedInfo = new JsonObject();
+        savedInfo.putString("mailContent", mail.toString());
+        savedInfo.putString(Supportpivot.IDIWS_FIELD, jsonPivot.getString(Supportpivot.IDIWS_FIELD, ""));
+        savedInfo.putString(Supportpivot.IDENT_FIELD, jsonPivot.getString(Supportpivot.IDENT_FIELD, ""));
+        savedInfo.putString(Supportpivot.IDJIRA_FIELD, jsonPivot.getString(Supportpivot.IDJIRA_FIELD, ""));
+
+        saveTicketToMongo("mail", savedInfo);
+
         emailSender.sendEmail(request,
                 mailTo,
                 null,
