@@ -384,13 +384,14 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         }
 
         JsonArray modules =   jsonPivot.getArray(Supportpivot.MODULES_FIELD, new JsonArray());
-        mail.append("\nmodules=");
+        mail.append("\nmodules=[");
         for(int i=0 ; i<modules.size();i++){
             if(i > 0) {
                 mail.append(", ");
             }
             mail.append((String)modules.get(i));
         }
+        mail.append("]");
         mail.append("\nstatut_iws=")
             .append(jsonPivot.getString(Supportpivot.STATUSIWS_FIELD, ""))
             .append("\nstatut_ent=")
