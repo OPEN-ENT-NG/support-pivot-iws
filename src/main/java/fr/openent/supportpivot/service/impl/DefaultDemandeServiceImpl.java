@@ -187,15 +187,16 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     }
 
     private void saveTicketToMongo(final String source, JsonObject jsonPivot) {
+
+        DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        Date date = new Date();
+        jsonPivot.putString("source", source);
+        jsonPivot.putString("date", dateFormat.format(date));
+
         mongo.insert(DEMANDE_COLLECTION, jsonPivot, new Handler<Message<JsonObject>>() {
             @Override
             public void handle(Message<JsonObject> retourJson) {
-                JsonObject body = retourJson.body();
-                DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-                Date date = new Date();
-                body.putString("source", source);
-                body.putString("date", dateFormat.format(date));
-                if (!"ok".equals(body.getString("status"))) {
+                if (!"ok".equals(retourJson.body().getString("status"))) {
                     log.error("Supportpivot : could not save json to mongoDB");
                 }
             }
@@ -424,11 +425,25 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
         saveTicketToMongo("mail", savedInfo);
 
+        JsonArray mailAtts = new JsonArray();
+        JsonArray atts = jsonPivot.getArray(Supportpivot.ATTACHMENT_FIELD, new JsonArray());
+        for (Object o : atts) {
+            if( !(o instanceof JsonObject)) continue;
+            JsonObject jsonAtt = (JsonObject)o;
+            if(!jsonAtt.containsField(Supportpivot.ATTACHMENT_NAME_FIELD)
+                    || !jsonAtt.containsField(Supportpivot.ATTACHMENT_CONTENT_FIELD)) continue;
+            JsonObject att = new JsonObject();
+            att.putString("name", jsonAtt.getString(Supportpivot.ATTACHMENT_NAME_FIELD));
+            att.putString("content", jsonAtt.getString(Supportpivot.ATTACHMENT_CONTENT_FIELD));
+            mailAtts.addObject(att);
+        }
+
         emailSender.sendEmail(request,
                 mailTo,
                 null,
                 null,
                 "TICKETCGI",
+                //mailAtts,
                 mail.toString(),
                 null,
                 false,
