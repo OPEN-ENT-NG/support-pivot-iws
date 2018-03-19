@@ -444,7 +444,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 null,
                 null,
                 "TICKETCGI",
-                //mailAtts,
+                mailAtts,
                 mail.toString(),
                 null,
                 false,
@@ -488,6 +488,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         sendToIWS(request, resource, handler);
     }
 
+
     /**
      * Encode a string in UTF-8
      * @param in String to encode
@@ -496,7 +497,6 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private String stringEncode(String in) {
         return new String(in.getBytes(), StandardCharsets.UTF_8);
     }
-
 
     /**
      * Send updated informations from a Jira ticket to IWS

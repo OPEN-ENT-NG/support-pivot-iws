@@ -2,6 +2,7 @@ package fr.openent.supportpivot;
 
 import org.entcore.common.http.BaseServer;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,39 +70,48 @@ public class Supportpivot extends BaseServer {
     public static final String STATUSPIVOT_RESOLVED = "Résolu";
     public static final String STATUSPIVOT_CLOSED = "Fermé";
 
+    /**
+     * Encode a string in UTF-8
+     * @param in String to encode
+     * @return encoded String
+     */
+    private static String stringEncode(String in) {
+        return new String(in.getBytes(), StandardCharsets.UTF_8);
+    }
+
 
     public final static Map<String, String> applicationsMap = new HashMap<String, String>()
     {
         {
-            put("/eliot/absences","Absences (Axess)");
-            put("/actualites","Actualités");
-            put("/admin","Administration");
-            put("/calendar","Agenda");
-            put("/eliot/agenda","Agenda (Axess)");
-            put("/support","Aide et Support");
-            put("/userbook/annuaire#/search","Annuaire");
-            put("/blog","Blog");
-            put("/eliot/textes","Cahier de textes (Axess)");
-            put("/mindmap","Carte mentale");
-            put("/rack","Casier");
-            put("/community","Communauté");
-            put("/cas","Connexion");
-            put("/workspace/workspace","Documents");
-            put("/exercizer","Exercizer");
-            put("/forum","Forum");
-            put("/timelinegenerator","Frise chronologique");
-            put("/conversation/conversation","Messagerie");
-            put("/collaborativewall","Mur collaboratif");
-            put("/eliot/notes","Notes (Axess)");
-            put("/pages","Pages");
-            put("/rbs","Réservation de ressources");
-            put("/eliot/scolarite","Scolarité (Axess)");
-            put("/poll","Sondage");
-            put("/statistics","Statistiques");
-            put("/rss","Widget Rss");
-            put("/bookmark","Widget Signets");
-            put("/wiki","Wiki");
-            put("/xiti","Xiti");
+            put("/eliot/absences",stringEncode("Absences (Axess)"));
+            put("/actualites",stringEncode("Actualités"));
+            put("/admin",stringEncode("Administration"));
+            put("/calendar",stringEncode("Agenda"));
+            put("/eliot/agenda",stringEncode("Agenda (Axess)"));
+            put("/support",stringEncode("Aide et Support"));
+            put("/userbook/annuaire#/search",stringEncode("Annuaire"));
+            put("/blog",stringEncode("Blog"));
+            put("/eliot/textes",stringEncode("Cahier de textes (Axess)"));
+            put("/mindmap",stringEncode("Carte mentale"));
+            put("/rack",stringEncode("Casier"));
+            put("/community",stringEncode("Communauté"));
+            put("/cas",stringEncode("Connexion"));
+            put("/workspace/workspace",stringEncode("Documents"));
+            put("/exercizer",stringEncode("Exercizer"));
+            put("/forum",stringEncode("Forum"));
+            put("/timelinegenerator",stringEncode("Frise chronologique"));
+            put("/conversation/conversation",stringEncode("Messagerie"));
+            put("/collaborativewall",stringEncode("Mur collaboratif"));
+            put("/eliot/notes",stringEncode("Notes (Axess)"));
+            put("/pages",stringEncode("Pages"));
+            put("/rbs",stringEncode("Réservation de ressources"));
+            put("/eliot/scolarite",stringEncode("Scolarité (Axess)"));
+            put("/poll",stringEncode("Sondage"));
+            put("/statistics",stringEncode("Statistiques"));
+            put("/rss",stringEncode("Widget Rss"));
+            put("/bookmark",stringEncode("Widget Signets"));
+            put("/wiki",stringEncode("Wiki"));
+            put("/xiti",stringEncode("Xiti"));
         }
     };
 
