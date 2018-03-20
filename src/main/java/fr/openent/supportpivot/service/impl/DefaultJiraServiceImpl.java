@@ -3,7 +3,6 @@ package fr.openent.supportpivot.service.impl;
 import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.service.JiraService;
 import fr.wseduc.webutils.Either;
-import fr.wseduc.webutils.email.EmailSender;
 import org.vertx.java.core.Handler;
 import org.vertx.java.core.Vertx;
 import org.vertx.java.core.buffer.Buffer;
@@ -897,7 +896,8 @@ public class DefaultJiraServiceImpl implements JiraService {
         String currentStatus = jiraTicket.getObject("fields").getObject("status").getString("name");
 
 
-        String currentStatusToIWS = "";
+        String currentStatusToIWS;
+        currentStatusToIWS = JIRA_MDP_STATUS.getArray("Default").get(0);
         for (String fieldName : JIRA_MDP_STATUS.getFieldNames()) {
             byte[] cstext = currentStatus.getBytes(UTF_8);
             String currentStatusEncoded = new String(cstext, ISO_8859_1);
@@ -905,12 +905,12 @@ public class DefaultJiraServiceImpl implements JiraService {
             if (JIRA_MDP_STATUS.getArray(fieldName).contains(currentStatusEncoded)) {
                currentStatusToIWS = fieldName;
                break;
-           } else {
-               currentStatusToIWS = JIRA_MDP_STATUS.getArray("Default").get(0);
            }
         }
 
-        jsonPivot.putString(Supportpivot.STATUSJIRA_FIELD, currentStatusToIWS);
+        byte[] cstext = currentStatusToIWS.getBytes(ISO_8859_1);
+        String currentStatusReEncoded = new String(cstext, UTF_8);
+        jsonPivot.putString(Supportpivot.STATUSJIRA_FIELD, currentStatusReEncoded);
 
         if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creation")) != null) {
             jsonPivot.putString(Supportpivot.DATE_CREA_FIELD,
@@ -959,8 +959,8 @@ public class DefaultJiraServiceImpl implements JiraService {
                     if (stringJsonObjectEither.isRight()) {
                         String b64FilePJ = stringJsonObjectEither.right().getValue().getString("b64Attachment");
                         JsonObject currentPJ = new JsonObject();
-                        currentPJ.putString("nom", attachmentInfos.getString("filename"));
-                        currentPJ.putString("contenu", b64FilePJ);
+                        currentPJ.putString(Supportpivot.ATTACHMENT_NAME_FIELD, attachmentInfos.getString("filename"));
+                        currentPJ.putString(Supportpivot.ATTACHMENT_CONTENT_FIELD, b64FilePJ);
                         allPJConverted.addObject(currentPJ);
                     } else {
                         handler.handle(new Either.Left<String, JsonObject>(
@@ -969,7 +969,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
                     if (nbAttachment.decrementAndGet() <= 0)
                     {
-                        jsonPivot.putArray("pj", allPJConverted);
+                        jsonPivot.putArray(Supportpivot.ATTACHMENT_FIELD, allPJConverted);
                         responseSent.set(true);
                         handler.handle(new Either.Right<String, JsonObject>(jsonPivot));
                     }
