@@ -108,10 +108,11 @@ public class SupportController extends ControllerHelper{
     /**
      * Webservice. Send an issue to specified mail with fictive info, for testing purpose
      */
-    @Get("testMail/:mail")
-    public void testMailToIWS(final HttpServerRequest request) {
-        final String mailTo = request.params().get("mail");
-        demandeService.testMailToIWS(request, mailTo, getDefaultResponseHandler(request));
+    @Get("getMongoInfos/:request")
+    @SecuredAction("supportpivot.ws.dbrequest")
+    public void getMongoInfos(final HttpServerRequest request) {
+        final String mailTo = request.params().get("request");
+        demandeService.getMongoInfos(request, mailTo, getDefaultResponseHandler(request));
     }
 
     /**

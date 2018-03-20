@@ -461,31 +461,18 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * @param mailTo mail to send to
      */
     @Override
-    public void testMailToIWS(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler) {
-        JsonObject resource = new JsonObject()
-                .putString(Supportpivot.COLLECTIVITY_FIELD, "MDP")
-                .putString(Supportpivot.ACADEMY_FIELD, "Paris")
-                .putString(Supportpivot.CREATOR_FIELD, "Jean Dupont")
-                .putString(Supportpivot.TICKETTYPE_FIELD, "Assistance")
-                .putString(Supportpivot.TITLE_FIELD, stringEncode("Demande générique de test"))
-                .putString(Supportpivot.DESCRIPTION_FIELD, stringEncode("Demande afin de tester la création de demande vers IWS"))
-                .putString(Supportpivot.PRIORITY_FIELD, "Mineure")
-                .putArray(Supportpivot.MODULES_FIELD,
-                        new JsonArray().addString(stringEncode("Actualités")).addString("Assistance ENT"))
-                .putString(Supportpivot.IDENT_FIELD, "42")
-                .putArray(Supportpivot.COMM_FIELD, new JsonArray()
-                    .addString("Jean Dupont| 17/11/2071 | La correction n'est pas urgente.")
-                    .addString(stringEncode("Administrateur Etab | 10/01/2017 | La demande a été transmise")))
-                .putArray(Supportpivot.ATTACHMENT_FIELD, new JsonArray()
-                    .add(new JsonObject()
-                                .putString(Supportpivot.ATTACHMENT_NAME_FIELD, "toto.txt")
-                                .putString(Supportpivot.ATTACHMENT_CONTENT_FIELD, "dHVidWRpLCB0dWJ1ZGE=")))
-                .putString(Supportpivot.STATUSENT_FIELD, "Nouveau")
-                .putString(Supportpivot.DATE_CREA_FIELD, "16/11/2017")
-                .putString(Supportpivot.ATTRIBUTION_FIELD, "IWS")
-                .putString("email", mailTo);
-
-        sendToIWS(request, resource, handler);
+    public void getMongoInfos(HttpServerRequest request, String mailTo, final Handler<Either<String, JsonObject>> handler) {
+        try {
+            JsonObject req = new JsonObject(java.net.URLDecoder.decode(mailTo, "UTF-8"));
+            mongo.find(DEMANDE_COLLECTION, req, new Handler<Message<JsonObject>>() {
+                @Override
+                public void handle(Message<JsonObject> jsonObjectMessage) {
+                    handler.handle(new Either.Right<String, JsonObject>(jsonObjectMessage.body()));
+                }
+            });
+        } catch(Exception e) {
+            handler.handle(new Either.Left<String, JsonObject>("Malformed json"));
+        }
     }
 
 

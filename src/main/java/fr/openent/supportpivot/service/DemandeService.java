@@ -32,7 +32,7 @@ public interface DemandeService {
      * Send an issue to IWS with fictive info, for testing purpose
      * @param mailTo mail to send to
      */
-    void testMailToIWS(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler);
+    void getMongoInfos(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler);
 
     /**
      * Send updated informations from a Jira ticket to IWS
