@@ -46,6 +46,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
     private final JsonObject JIRA_FIELD;
     private final JsonObject JIRA_MDP_STATUS;
+    private final String JIRA_MDP_STATUS_DEFAULT;
 
 
     DefaultJiraServiceImpl(Vertx vertx, Container container) {
@@ -59,6 +60,7 @@ public class DefaultJiraServiceImpl implements JiraService {
         int jiraPort = container.config().getInteger("jira-port");
         JIRA_FIELD = container.config().getObject("jira-custom-fields");
         JIRA_MDP_STATUS = container.config().getObject("collection-MDP").getObject("statutsJira");
+        JIRA_MDP_STATUS_DEFAULT = container.config().getObject("collection-MDP").getString("statutsDefault");
         if(JIRA_FIELD == null) {
             log.fatal("Supportpivot : no jira-custom-fields in configuration");
         }
@@ -95,7 +97,7 @@ public class DefaultJiraServiceImpl implements JiraService {
         } else {
             final JsonObject jsonJiraTicket = new JsonObject();
 
-            String currentPriority = jsonPivot.getString(Supportpivot.PRIORITY_FIELD, "");
+            String currentPriority = jsonPivot.getString(Supportpivot.PRIORITY_FIELD, DEFAULT_PRIORITY);
             switch(currentPriority) {
                 case "Mineur" :
                     currentPriority = "Mineure";
@@ -107,7 +109,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                     currentPriority = "Bloquante";
                     break;
                 default:
-                    currentPriority = DEFAULT_PRIORITY;
+                    currentPriority = "Mineure";
                     break;
             }
 
@@ -505,7 +507,8 @@ public class DefaultJiraServiceImpl implements JiraService {
                 .putString(JIRA_FIELD.getString("resolution_ent"), jsonPivot.getString(Supportpivot.DATE_RESOENT_FIELD))
                 .putString(JIRA_FIELD.getString("resolution_iws"), jsonPivot.getString(Supportpivot.DATE_RESOIWS_FIELD))
                 .putString(("description"), jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD))
-                .putString("summary", jsonPivot.getString(Supportpivot.TITLE_FIELD)));
+                .putString("summary", jsonPivot.getString(Supportpivot.TITLE_FIELD))
+                .putString(JIRA_FIELD.getString("creator"), jsonPivot.getString(Supportpivot.CREATOR_FIELD)));
 
         URI jira_update_infos_URI;
         try {
@@ -895,22 +898,16 @@ public class DefaultJiraServiceImpl implements JiraService {
 
         String currentStatus = jiraTicket.getObject("fields").getObject("status").getString("name");
 
-
         String currentStatusToIWS;
-        currentStatusToIWS = JIRA_MDP_STATUS.getArray("Default").get(0);
+        currentStatusToIWS = JIRA_MDP_STATUS_DEFAULT;
         for (String fieldName : JIRA_MDP_STATUS.getFieldNames()) {
-            byte[] cstext = currentStatus.getBytes(UTF_8);
-            String currentStatusEncoded = new String(cstext, ISO_8859_1);
-
-            if (JIRA_MDP_STATUS.getArray(fieldName).contains(currentStatusEncoded)) {
+            if (JIRA_MDP_STATUS.getArray(fieldName).contains(currentStatus)) {
                currentStatusToIWS = fieldName;
                break;
            }
         }
 
-        byte[] cstext = currentStatusToIWS.getBytes(ISO_8859_1);
-        String currentStatusReEncoded = new String(cstext, UTF_8);
-        jsonPivot.putString(Supportpivot.STATUSJIRA_FIELD, currentStatusReEncoded);
+        jsonPivot.putString(Supportpivot.STATUSJIRA_FIELD, currentStatusToIWS);
 
         if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("creation")) != null) {
             jsonPivot.putString(Supportpivot.DATE_CREA_FIELD,
@@ -928,8 +925,8 @@ public class DefaultJiraServiceImpl implements JiraService {
         }
 
         if  (jiraTicket.getObject("fields").getString("resolutiondate") != null) {
-            jsonPivot.putString(Supportpivot.DATE_RESOJIRA_FIELD,
-                    jiraTicket.getObject("fields").getString("resolutiondate"));
+            String dateFormated = getDateFormatted(jiraTicket.getObject("fields").getString("resolutiondate"), false);
+            jsonPivot.putString(Supportpivot.DATE_RESOJIRA_FIELD, dateFormated);
         }
 
         if  (jiraTicket.getObject("fields").getString(JIRA_FIELD.getString("response_technical")) != null) {

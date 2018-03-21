@@ -38,10 +38,10 @@
     		"statutsJira": {
     			"Nouveau": ["Nouveau"],
     			"Ouvert": ["En cours", "En attente"],
-    			"Résolu": ["Résolu sans livraison", "Résolu et à tester"],
-    			"Fermé": ["Fermé"],
-    			"Default": ["Ouvert"]
-    		}
+    			"Résolu": ["Résolu sans livraison", "Resolu sans livraison", "Résolu et à tester", "Resolu et a tester"],
+    			"Fermé": ["Fermé", "Ferme"]
+    		},
+    		"statutsDefault" : "Ouvert"
     	}
       }
     }

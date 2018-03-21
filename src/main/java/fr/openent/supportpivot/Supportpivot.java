@@ -65,10 +65,10 @@ public class Supportpivot extends BaseServer {
     public static final String STATUSENT_RESOLVED = "3";
     public static final String STATUSENT_CLOSED = "4";
 
-    public static final String STATUSPIVOT_NEW = "Ouvert";
-    public static final String STATUSPIVOT_OPENED = "En cours";
-    public static final String STATUSPIVOT_RESOLVED = "Résolu";
-    public static final String STATUSPIVOT_CLOSED = "Fermé";
+    public static final String STATUSPIVOT_NEW = stringEncode("Ouvert");
+    public static final String STATUSPIVOT_OPENED = stringEncode("En cours");
+    public static final String STATUSPIVOT_RESOLVED = stringEncode("Résolu");
+    public static final String STATUSPIVOT_CLOSED = stringEncode("Fermé");
 
     /**
      * Encode a string in UTF-8
@@ -76,7 +76,7 @@ public class Supportpivot extends BaseServer {
      * @return encoded String
      */
     private static String stringEncode(String in) {
-        return new String(in.getBytes(), StandardCharsets.UTF_8);
+        return new String(in.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
     }
 
 
