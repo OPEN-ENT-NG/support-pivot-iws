@@ -2,8 +2,6 @@ package fr.openent.supportpivot;
 
 import org.entcore.common.http.BaseServer;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,7 +46,6 @@ public class Supportpivot extends BaseServer {
             IDIWS_FIELD,
             COLLECTIVITY_FIELD,
             CREATOR_FIELD,
-            TITLE_FIELD,
             DESCRIPTION_FIELD,
             ATTRIBUTION_FIELD
             };
@@ -67,8 +64,8 @@ public class Supportpivot extends BaseServer {
 
     public static final String STATUSPIVOT_NEW = stringEncode("Ouvert");
     public static final String STATUSPIVOT_OPENED = stringEncode("En cours");
-    public static final String STATUSPIVOT_RESOLVED = stringEncode("Résolu");
-    public static final String STATUSPIVOT_CLOSED = stringEncode("Fermé");
+    public static final String STATUSPIVOT_RESOLVED = stringEncode("R&eacute;solu");
+    public static final String STATUSPIVOT_CLOSED = stringEncode("Ferm&eacute;");
 
     /**
      * Encode a string in UTF-8
@@ -76,7 +73,7 @@ public class Supportpivot extends BaseServer {
      * @return encoded String
      */
     private static String stringEncode(String in) {
-        return new String(in.getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        return  in;
     }
 
 
@@ -84,7 +81,7 @@ public class Supportpivot extends BaseServer {
     {
         {
             put("/eliot/absences",stringEncode("Absences (Axess)"));
-            put("/actualites",stringEncode("Actualités"));
+            put("/actualites",stringEncode("Actualit&eacute;s"));
             put("/admin",stringEncode("Administration"));
             put("/calendar",stringEncode("Agenda"));
             put("/eliot/agenda",stringEncode("Agenda (Axess)"));
@@ -94,7 +91,7 @@ public class Supportpivot extends BaseServer {
             put("/eliot/textes",stringEncode("Cahier de textes (Axess)"));
             put("/mindmap",stringEncode("Carte mentale"));
             put("/rack",stringEncode("Casier"));
-            put("/community",stringEncode("Communauté"));
+            put("/community",stringEncode("Communaut&eacute;"));
             put("/cas",stringEncode("Connexion"));
             put("/workspace/workspace",stringEncode("Documents"));
             put("/exercizer",stringEncode("Exercizer"));
@@ -104,7 +101,7 @@ public class Supportpivot extends BaseServer {
             put("/collaborativewall",stringEncode("Mur collaboratif"));
             put("/eliot/notes",stringEncode("Notes (Axess)"));
             put("/pages",stringEncode("Pages"));
-            put("/rbs",stringEncode("Réservation de ressources"));
+            put("/rbs",stringEncode("R&eacute;servation de ressources"));
             put("/eliot/scolarite",stringEncode("Scolarité (Axess)"));
             put("/poll",stringEncode("Sondage"));
             put("/statistics",stringEncode("Statistiques"));
@@ -116,7 +113,7 @@ public class Supportpivot extends BaseServer {
     };
 
     @Override
-	public void start() {
+	public void start() throws Exception {
 		super.start();
 		addController(new SupportController());
 	}

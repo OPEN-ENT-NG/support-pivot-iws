@@ -10,15 +10,14 @@ import fr.wseduc.webutils.Either;
 import fr.wseduc.webutils.email.EmailSender;
 import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.request.RequestUtils;
+import io.vertx.core.Handler;
+import io.vertx.core.Vertx;
+import io.vertx.core.eventbus.Message;
+import io.vertx.core.http.HttpServerRequest;
+import io.vertx.core.json.JsonObject;
 import org.entcore.common.controller.ControllerHelper;
 import org.entcore.common.email.EmailFactory;
-import org.vertx.java.core.Handler;
-import org.vertx.java.core.eventbus.Message;
-import org.vertx.java.core.Vertx;
-import org.vertx.java.core.http.HttpServerRequest;
 import org.vertx.java.core.http.RouteMatcher;
-import org.vertx.java.core.json.JsonObject;
-import org.vertx.java.platform.Container;
 
 import java.util.Map;
 
@@ -38,12 +37,12 @@ public class SupportController extends ControllerHelper{
     private DemandeService demandeService;
 
     @Override
-    public void init(Vertx vertx, final Container container, RouteMatcher rm,
+    public void init(Vertx vertx, final JsonObject config, RouteMatcher rm,
                      Map<String, fr.wseduc.webutils.security.SecuredAction> securedActions) {
-        super.init(vertx, container, rm, securedActions);
-        EmailFactory emailFactory = new EmailFactory(vertx, container, container.config());
+        super.init(vertx, config, rm, securedActions);
+        EmailFactory emailFactory = new EmailFactory(vertx, config);
         EmailSender emailSender = emailFactory.getSender();
-        this.demandeService = new DefaultDemandeServiceImpl(vertx, container, emailSender);
+        this.demandeService = new DefaultDemandeServiceImpl(vertx, config, emailSender);
     }
 
     /**
@@ -52,12 +51,8 @@ public class SupportController extends ControllerHelper{
     @Post("/demande")
     @SecuredAction("supportpivot.ws.demande")
     public void demandeSupportIWS(final HttpServerRequest request) {
-        RequestUtils.bodyToJson(request, new Handler<JsonObject>() {
-            @Override
-            public void handle(final JsonObject resource) {
-                demandeService.addIWS(request, resource, getDefaultResponseHandler(request));
-            }
-        });
+        //TODO return errorcode 1 if non JSON body
+        RequestUtils.bodyToJson(request, resource -> demandeService.addIWS(request, resource, getDefaultResponseHandler(request)));
     }
 
     /**
@@ -65,21 +60,23 @@ public class SupportController extends ControllerHelper{
      * @return handler with error code, error message and status
      */
     private Handler<Either<String, JsonObject>> getDefaultResponseHandler(final HttpServerRequest request){
-        return new Handler<Either<String, JsonObject>>() {
-            @Override
-            public void handle(Either<String, JsonObject> event) {
+        return  event -> {
                 if (event.isRight()) {
                     Renders.renderJson(request, event.right().getValue(), 200);
                 } else {
                     String errorCode = event.left().getValue();
+                    String errorCodeMsg="";
+                    if(errorCode.contains(";")){
+                        errorCodeMsg=errorCode.substring(errorCode.indexOf(";")+1);
+                        errorCode=errorCode.split(";")[0];
+                    }
                     JsonObject error = new JsonObject()
-                            .putString("errorCode", errorCode)
-                            .putString("errorMessage", "")
-                            .putString("status", "KO");
+                            .put("errorCode", errorCode)
+                            .put("errorMessage", errorCodeMsg)
+                            .put("status", "KO");
                     Renders.renderJson(request, error, 400);
                 }
-            }
-        };
+            };
     }
 
     /**
@@ -87,19 +84,16 @@ public class SupportController extends ControllerHelper{
      */
     @BusAddress("supportpivot.demande")
     public void busEvents(final Message<JsonObject> message) {
-        final JsonObject issue = message.body().getObject("issue");
-        demandeService.addENT( issue, new Handler<Either<String, JsonObject>>() {
-            @Override
-            public void handle(Either<String, JsonObject> event) {
-                if(event.isRight()) {
-                    message.reply(new JsonObject().putString("status", "ok")
-                            .putString("message", "invalid.action")
-                            .putObject("issue", issue));
-                } else {
-                    log.error("Supportpivot : error when trying send ticket from ENT");
-                    message.reply(new JsonObject().putString("status", "ko")
-                        .putString("message", event.left().getValue()));
-                }
+        final JsonObject issue = message.body().getJsonObject("issue");
+        demandeService.addENT( issue, event -> {
+            if(event.isRight()) {
+                message.reply(new JsonObject().put("status", "ok")
+                        .put("message", "invalid.action")
+                        .put("issue", issue));
+            } else {
+                log.error("Supportpivot : error when trying send ticket from ENT" + event.left().getValue());
+                message.reply(new JsonObject().put("status", "ko")
+                    .put("message", event.left().getValue()));
             }
         });
 

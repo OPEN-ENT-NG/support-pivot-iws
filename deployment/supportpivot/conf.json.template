@@ -1,5 +1,5 @@
     {
-      "name": "fr.openent~supportpivot~0.1-SNAPSHOT",
+      "name": "fr.openent~supportpivot~0.2-SNAPSHOT",
       "config": {
         "main" : "fr.openent.supportpivot.Supportpivot",
         "port" : 9595,
@@ -13,35 +13,30 @@
         "app-registry.port" : 8012,
         "mode" : "${mode}",
         "entcore.port" : 8009,
-		"default-collectivity" : "MDP",
-		"default-attribution" : "RECTORAT",
-		"default-tickettype" : "Assistance",
-		"default-priority" : "Mineure",
-        "mail-iws" : "thomas.coleno@cgi.com",
-        "jira-login" : "ISILOG",
-        "jira-passwd" : "isilog_17",
-        "jira-host" : "https://entsupport.gdapublic.fr",
+		"default-collectivity" : "${supportPivotDefCollectivity}",
+		"default-attribution" : "${supportPivotDefAttribution}",
+		"default-tickettype" : "${supportPivotDefTicketType}",
+		"default-priority" : "${supportPivotDefTicketPriority}",
+        "mail-iws" : "${supportPivotIWSMail}",
+        "jira-login" : "${supportPivotJIRALogin",
+        "jira-passwd" : "${supportPivotJIRAPwd}",
+        "jira-host" : "${supportPivotJIRAHost}",
         "jira-url" : "/rest/api/2/issue/",
-        "jira-port" : 80,
+        "jira-port" : ${supportPivotJIRAPort},
         "jira-custom-fields" : {
-            "id_ent" : "customfield_12600",
-            "id_iws" : "customfield_12400",
-            "status_ent" : "customfield_12602",
-            "status_iws" : "customfield_12601",
-            "creation" : "customfield_12608",
-            "resolution_ent" : "customfield_12606",
-            "resolution_iws" : "customfield_12605",
-            "creator" : "customfield_11405",
-            "response_technical" : "customfield_12609"
+            "id_ent" : "${supportPivotCFIdEnt}",
+            "id_iws" : "${supportPivotCFIdIws}",
+            "status_ent" : "${supportPivotCFStEnt}",
+            "status_iws" : "${supportPivotCFStIws}",
+            "creation" : "${supportPivotCFCreateDate}",
+            "resolution_ent" : "${supportPivotCFResEnt}",
+            "resolution_iws" : "${supportPivotCFResIws}",
+            "creator" : "${supportPivotCFCreator}",
+            "response_technical" : "${supportPivotCFTechResp}"
         }
-    	"collection-MDP": {
-    		"statutsJira": {
-    			"Nouveau": ["Nouveau"],
-    			"Ouvert": ["En cours", "En attente"],
-    			"Résolu": ["Résolu sans livraison", "Resolu sans livraison", "Résolu et à tester", "Resolu et a tester"],
-    			"Fermé": ["Fermé", "Ferme"]
-    		},
-    		"statutsDefault" : "Ouvert"
+    	"status-mapping": {
+    		"statutsJira": ${supportPivotMappingStatus},
+    		"statutsDefault" : "${supportPivotDefaultStatut}"
     	}
       }
     }
