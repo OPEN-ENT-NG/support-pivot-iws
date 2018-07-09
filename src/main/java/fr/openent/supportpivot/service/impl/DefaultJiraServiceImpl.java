@@ -21,10 +21,7 @@ import java.text.DateFormat;
 import java.text.Format;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Base64;
-import java.util.Date;
-import java.util.LinkedList;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -41,13 +38,16 @@ public class DefaultJiraServiceImpl implements JiraService {
     private final String JIRA_HOST;
     private final String jiraAuthInfo;
     private final String urlJiraFinal;
-    private final String DEFAULT_COLLECTIVITY;
-    private final String DEFAULT_TICKETTYPE;
+    private final String JIRA_PROJECT_NAME;
+    private final String COLLECTIVITY_NAME;
+    private final String ACADEMY_NAME;
+    private final String DEFAULT_JIRA_TICKETTYPE;
     private final String DEFAULT_PRIORITY;
-
+    private final JsonArray JIRA_ALLOWED_PRIORITY;
+    private final JsonArray JIRA_ALLOWED_TICKETTYPE;
     private final JsonObject JIRA_FIELD;
-    private final JsonObject JIRA_MDP_STATUS;
-    private final String JIRA_MDP_STATUS_DEFAULT;
+    private final JsonObject JIRA_STATUS_MAPPING;
+    private final String JIRA_STATUS_DEFAULT;
 
 
     private static Base64.Encoder encoder = Base64.getMimeEncoder().withoutPadding();
@@ -58,23 +58,20 @@ public class DefaultJiraServiceImpl implements JiraService {
         this.vertx = vertx;
         String jiraLogin = config.getString("jira-login");
         String jiraPassword = config.getString("jira-passwd");
+        this.jiraAuthInfo = jiraLogin + ":" + jiraPassword;
         this.JIRA_HOST = config.getString("jira-host");
         String jiraUrl = config.getString("jira-url");
-        int jiraPort = config.getInteger("jira-port");
+        urlJiraFinal = JIRA_HOST + jiraUrl;
+        this.JIRA_PROJECT_NAME = config.getString("jira-project-key");
+        this.COLLECTIVITY_NAME = config.getString("collectivity");
+        this.ACADEMY_NAME = config.getString("academy");
         JIRA_FIELD = config.getJsonObject("jira-custom-fields");
-        JIRA_MDP_STATUS = config.getJsonObject("status-mapping").getJsonObject("statutsJira");
-        JIRA_MDP_STATUS_DEFAULT = config.getJsonObject("status-mapping").getString("statutsDefault");
-        if(JIRA_FIELD == null) {
-            log.fatal("Supportpivot : no jira-custom-fields in configuration");
-        }
-
-        jiraAuthInfo = jiraLogin + ":" + jiraPassword;
-        urlJiraFinal = JIRA_HOST + ":" + jiraPort + jiraUrl;
-
-        this.DEFAULT_COLLECTIVITY = config.getString("default-collectivity");
-        this.DEFAULT_TICKETTYPE = config.getString("default-tickettype");
+        JIRA_STATUS_MAPPING = config.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
+        JIRA_STATUS_DEFAULT = config.getJsonObject("jira-status-mapping").getString("statutsDefault");
+        JIRA_ALLOWED_TICKETTYPE = config.getJsonArray("jira-allowed-tickettype");
+        this.DEFAULT_JIRA_TICKETTYPE = config.getString("default-tickettype");
         this.DEFAULT_PRIORITY = config.getString("default-priority");
-
+        this.JIRA_ALLOWED_PRIORITY = config.getJsonArray("jira-allowed-priority");
     }
 
 
@@ -93,12 +90,10 @@ public class DefaultJiraServiceImpl implements JiraService {
             return;
         }
 
-
-        String ticketType = DEFAULT_TICKETTYPE;
+        //Ticket Type
+        String ticketType = DEFAULT_JIRA_TICKETTYPE;
         if (jsonPivot.containsKey(Supportpivot.TICKETTYPE_FIELD)
-            && ("Anomalie".equals(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD)) ||
-                "Incident".equals(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD)) ||
-                "Service".equals(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD)))) {
+                && JIRA_ALLOWED_TICKETTYPE.contains(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD))) {
             ticketType = jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD);
         }
 
@@ -111,40 +106,20 @@ public class DefaultJiraServiceImpl implements JiraService {
         if (jsonPivot.containsKey(Supportpivot.IDJIRA_FIELD)
             && !jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty()) {
             String jiraTicketId = jsonPivot.getString(Supportpivot.IDJIRA_FIELD);
-            getJiraTicketContents(jsonPivot, jiraTicketId, finalHandler);
+            updateJiraTicketContents(jsonPivot, jiraTicketId, finalHandler);
         } else {
             final JsonObject jsonJiraTicket = new JsonObject();
 
-            String currentPriority = jsonPivot.getString(Supportpivot.PRIORITY_FIELD, DEFAULT_PRIORITY);
-            switch(currentPriority) {
-                case "Mineur" :
-                    currentPriority = "Mineure";
-                    break;
-                case "Majeur":
-                    currentPriority = "Majeure";
-                    break;
-                case "Bloquant":
-                    currentPriority = "Bloquante";
-                    break;
-                default:
-                    currentPriority = "Mineure";
-                    break;
+            // priority PIVOT -> JIRA
+            String jsonPriority = jsonPivot.getString(Supportpivot.PRIORITY_FIELD);
+            if(!Supportpivot.PIVOT_PRIORITY_LEVEL.contains(jsonPriority)){
+                jsonPriority = DEFAULT_PRIORITY;
             }
-
-            //TODO parametrer ce mapping
-            String currentCollectivite = jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD);
-            switch(currentCollectivite) {
-                case "MDP":
-                    currentCollectivite = "NGMDP";
-                    break;
-                default:
-                    currentCollectivite = "NGMDP";
-                    break;
-            }
+            String currentPriority = JIRA_ALLOWED_PRIORITY.getString(Supportpivot.PIVOT_PRIORITY_LEVEL.indexOf(jsonPriority));
 
             jsonJiraTicket.put("fields", new JsonObject()
                     .put("project", new JsonObject()
-                            .put("key", currentCollectivite))
+                            .put("key", JIRA_PROJECT_NAME))
                     .put("summary", jsonPivot.getString(Supportpivot.TITLE_FIELD))
                     .put("description", jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD))
                     .put("issuetype", new JsonObject()
@@ -197,7 +172,9 @@ public class DefaultJiraServiceImpl implements JiraService {
                                         }
                                     });
                         } else {
-                            log.error("Error when calling URL : " + response.statusCode() + response.statusMessage() + ". Error when creating Jira ticket.");
+                            log.error("Sent ticket to Jira : " + jsonJiraTicket);
+                            log.error("Error when calling URL " + urlJiraFinal + " : " + response.statusCode() + response.statusMessage() + ". Error when creating Jira ticket.");
+                            response.bodyHandler(event -> log.error("Jira error response :" + event.toString()));
                             finalHandler.handle(new Either.Left<>("999;Error when creating Jira ticket"));
                         }
                     });
@@ -454,8 +431,8 @@ public class DefaultJiraServiceImpl implements JiraService {
     /**
      * Get general ticket information via Jira API
      */
-    private void getJiraTicketContents(final JsonObject jsonPivot, final String jiraTicketId,
-                                       final Handler<Either<String, JsonObject>> handler) {
+    private void updateJiraTicketContents(final JsonObject jsonPivot, final String jiraTicketId,
+                                          final Handler<Either<String, JsonObject>> handler) {
 
         URI jira_get_infos_URI;
         final String urlGetTicketGeneralInfo = urlJiraFinal + jiraTicketId ;
@@ -463,7 +440,7 @@ public class DefaultJiraServiceImpl implements JiraService {
         try {
             jira_get_infos_URI = new URI(urlGetTicketGeneralInfo);
         } catch (URISyntaxException e) {
-            log.error("Invalid jira web service uri getJiraTicketContents", e);
+            log.error("Invalid jira web service uri updateJiraTicketContents", e);
             handler.handle(new Either.Left<>("999;Invalid jira url : " + urlGetTicketGeneralInfo));
             return;
         }
@@ -492,6 +469,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                 break;
             default :
                 log.error("Error when calling URL : " + response.statusMessage());
+               response.bodyHandler(event -> log.error("Jira response : " + event));
                 handler.handle(new Either.Left<>("999;Error when getting Jira ticket information"));
         }
     }
@@ -811,19 +789,9 @@ public class DefaultJiraServiceImpl implements JiraService {
 
         final JsonObject jsonPivot = new JsonObject();
 
-        String currentCollectivite = jiraTicket.getJsonObject("fields").getJsonObject("project").getString("name");
-        switch(currentCollectivite) {
-            case "NGMDP":
-                currentCollectivite = DEFAULT_COLLECTIVITY;
-                break;
-            default:
-                currentCollectivite = DEFAULT_COLLECTIVITY;
-                break;
-        }
+        jsonPivot.put(Supportpivot.COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
 
-        jsonPivot.put(Supportpivot.COLLECTIVITY_FIELD, currentCollectivite);
-
-        jsonPivot.put(Supportpivot.ACADEMY_FIELD, "PARIS");
+        jsonPivot.put(Supportpivot.ACADEMY_FIELD, ACADEMY_NAME);
 
 
         if  (jiraTicket.getJsonObject("fields").getString(JIRA_FIELD.getString("creator")) != null) {
@@ -907,9 +875,9 @@ public class DefaultJiraServiceImpl implements JiraService {
         String currentStatus = jiraTicket.getJsonObject("fields").getJsonObject("status").getString("name");
 
         String currentStatusToIWS;
-        currentStatusToIWS = JIRA_MDP_STATUS_DEFAULT;
-        for (String fieldName : JIRA_MDP_STATUS.fieldNames()) {
-            if (JIRA_MDP_STATUS.getJsonArray(fieldName).contains(currentStatus)) {
+        currentStatusToIWS = JIRA_STATUS_DEFAULT;
+        for (String fieldName : JIRA_STATUS_MAPPING.fieldNames()) {
+            if (JIRA_STATUS_MAPPING.getJsonArray(fieldName).contains(currentStatus)) {
                currentStatusToIWS = fieldName;
                break;
            }

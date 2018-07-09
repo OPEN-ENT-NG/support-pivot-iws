@@ -2,8 +2,7 @@ package fr.openent.supportpivot;
 
 import org.entcore.common.http.BaseServer;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Supportpivot extends BaseServer {
 
@@ -56,6 +55,11 @@ public class Supportpivot extends BaseServer {
             TITLE_FIELD,
             DESCRIPTION_FIELD
     };
+
+    public static final List<String> PIVOT_PRIORITY_LEVEL = Arrays.asList(
+            "Mineur",
+            "Majeur",
+            "Bloquant");
 
     public static final String STATUSENT_NEW = "1";
     public static final String STATUSENT_OPENED = "2";

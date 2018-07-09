@@ -1,6 +1,5 @@
 package fr.openent.supportpivot.service.impl;
 
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.service.DemandeService;
 import fr.openent.supportpivot.service.JiraService;
@@ -39,7 +38,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private final EventBus eb;
 
     private final String MAIL_IWS;
-    private final String COLLECTIVITY_DEFAULT;
+    private final String COLLECTIVITY_NAME;
     private final String ATTRIBUTION_DEFAULT;
     private final String TICKETTYPE_DEFAULT;
     private final String PRIORITY_DEFAULT;
@@ -54,7 +53,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
         eb = getEventBus(vertx);
         this.MAIL_IWS = config.getString("mail-iws");
-        this.COLLECTIVITY_DEFAULT = config.getString("default-collectivity");
+        this.COLLECTIVITY_NAME = config.getString("collectivity");
         this.ATTRIBUTION_DEFAULT = config.getString("default-attribution");
         this.TICKETTYPE_DEFAULT = config.getString("default-tickettype");
         this.PRIORITY_DEFAULT = config.getString("default-priority");
@@ -112,7 +111,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         }
         else {
             if( !jsonPivot.containsKey(Supportpivot.COLLECTIVITY_FIELD) ) {
-                jsonPivot.put(Supportpivot.COLLECTIVITY_FIELD, COLLECTIVITY_DEFAULT);
+                jsonPivot.put(Supportpivot.COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
             }
             if( !jsonPivot.containsKey(Supportpivot.ATTRIBUTION_FIELD) ) {
                 jsonPivot.put(Supportpivot.ATTRIBUTION_FIELD, ATTRIBUTION_DEFAULT);
@@ -264,7 +263,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                         && jsonPivot.getString(Supportpivot.IDENT_FIELD).isEmpty()) {
                     sendToENT(jsonPivot, entResponse -> {
                         if(entResponse.isLeft()) {
-                            log.error("Supportpivot : could not send JIRA ticket to ENT");
+                            log.error("Supportpivot : could not send JIRA ticket to ENT" + entResponse.left().getValue());
                         }
                     });
                 }

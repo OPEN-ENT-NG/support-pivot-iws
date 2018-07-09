@@ -13,16 +13,19 @@
         "app-registry.port" : 8012,
         "mode" : "${mode}",
         "entcore.port" : 8009,
-		"default-collectivity" : "${supportPivotDefCollectivity}",
+		"collectivity" : "${supportPivotCollectivity}",
+		"academy" : "${supportPivotAcademy}",
 		"default-attribution" : "${supportPivotDefAttribution}",
 		"default-tickettype" : "${supportPivotDefTicketType}",
 		"default-priority" : "${supportPivotDefTicketPriority}",
         "mail-iws" : "${supportPivotIWSMail}",
-        "jira-login" : "${supportPivotJIRALogin",
+        "jira-login" : "${supportPivotJIRALogin}",
         "jira-passwd" : "${supportPivotJIRAPwd}",
         "jira-host" : "${supportPivotJIRAHost}",
         "jira-url" : "/rest/api/2/issue/",
-        "jira-port" : ${supportPivotJIRAPort},
+        "jira-project-key" :  "${supportPivotJIRAProjectKey}",
+        "jira-allowed-tickettype" :  ${supportPivotJIRAAllowedTicketType},
+        "jira-allowed-priority":  ${supportPivotJIRAAllowedPriority},
         "jira-custom-fields" : {
             "id_ent" : "${supportPivotCFIdEnt}",
             "id_iws" : "${supportPivotCFIdIws}",
@@ -33,10 +36,10 @@
             "resolution_iws" : "${supportPivotCFResIws}",
             "creator" : "${supportPivotCFCreator}",
             "response_technical" : "${supportPivotCFTechResp}"
-        }
-    	"status-mapping": {
+        },
+    	"jira-status-mapping": {
     		"statutsJira": ${supportPivotMappingStatus},
-    		"statutsDefault" : "${supportPivotDefaultStatut}"
+    		"statutsDefault" : "${supportPivotDefaultStatus}"
     	}
       }
     }

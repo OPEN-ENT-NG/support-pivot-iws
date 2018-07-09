@@ -48,50 +48,56 @@ Le module exploite
            l'emailSender du springboard pour l'escalade vers IWS depuis le module support ou JIRA.  
 
 ## Configuration
+
+pré-requis : un mail sender doit être configurer sur la plateforme.
+
 Contenu du fichier deployment/support/conf.json.template :
 
-    {
-      "name": "fr.openent~supportpivot~0.2-SNAPSHOT",
-      "config": {
-        "main" : "fr.openent.supportpivot.Supportpivot",
-        "port" : 9595,
-        "app-name" : "Supportpivot",
-    	"app-address" : "/supportpivot",
-    	"app-icon" : "Supportpivot-large",
-        "host": "${host}",
-        "ssl" : $ssl,
-        "auto-redeploy": false,
-        "userbook-host": "${host}",
-        "app-registry.port" : 8012,
-        "mode" : "${mode}",
-        "entcore.port" : 8009,
-		"default-collectivity" : "${supportPivotDefCollectivity}",
-		"default-attribution" : "${supportPivotDefAttribution}",
-		"default-tickettype" : "${supportPivotDefTicketType}",
-		"default-priority" : "${supportPivotDefTicketPriority}",
-        "mail-iws" : "${supportPivotIWSMail}",
-        "jira-login" : "${supportPivotJIRALogin",
-        "jira-passwd" : "${supportPivotJIRAPwd}",
-        "jira-host" : "${supportPivotJIRAHost}",
-        "jira-url" : "/rest/api/2/issue/",
-        "jira-port" : ${supportPivotJIRAPort},
-        "jira-custom-fields" : {
-            "id_ent" : "${supportPivotCFIdEnt}",
-            "id_iws" : "${supportPivotCFIdIws}",
-            "status_ent" : "${supportPivotCFStEnt}",
-            "status_iws" : "${supportPivotCFStIws}",
-            "creation" : "${supportPivotCFCreateDate}",
-            "resolution_ent" : "${supportPivotCFResEnt}",
-            "resolution_iws" : "${supportPivotCFResIws}",
-            "creator" : "${supportPivotCFCreator}",
-            "response_technical" : "${supportPivotCFTechResp}"
+     {
+          "name": "fr.openent~supportpivot~0.2-SNAPSHOT",
+          "config": {
+            "main" : "fr.openent.supportpivot.Supportpivot",
+            "port" : 9595,
+            "app-name" : "Supportpivot",
+        	"app-address" : "/supportpivot",
+        	"app-icon" : "Supportpivot-large",
+            "host": "${host}",
+            "ssl" : $ssl,
+            "auto-redeploy": false,
+            "userbook-host": "${host}",
+            "app-registry.port" : 8012,
+            "mode" : "${mode}",
+            "entcore.port" : 8009,
+    		"collectivity" : "${supportPivotCollectivity}",
+    		"academy" : "${supportPivotAcademy}",
+    		"default-attribution" : "${supportPivotDefAttribution}",
+    		"default-tickettype" : "${supportPivotDefTicketType}",
+    		"default-priority" : "${supportPivotDefTicketPriority}",
+            "mail-iws" : "${supportPivotIWSMail}",
+            "jira-login" : "${supportPivotJIRALogin}",
+            "jira-passwd" : "${supportPivotJIRAPwd}",
+            "jira-host" : "${supportPivotJIRAHost}",
+            "jira-url" : "/rest/api/2/issue/",
+            "jira-project-key" :  "${supportPivotJIRAProjectKey}",
+            "jira-allowed-tickettype" :  "${supportPivotJIRAAllowedTicketType}",
+            "jira-allowed-priority":  "${supportPivotJIRAAllowedPriority}",
+            "jira-custom-fields" : {
+                "id_ent" : "${supportPivotCFIdEnt}",
+                "id_iws" : "${supportPivotCFIdIws}",
+                "status_ent" : "${supportPivotCFStEnt}",
+                "status_iws" : "${supportPivotCFStIws}",
+                "creation" : "${supportPivotCFCreateDate}",
+                "resolution_ent" : "${supportPivotCFResEnt}",
+                "resolution_iws" : "${supportPivotCFResIws}",
+                "creator" : "${supportPivotCFCreator}",
+                "response_technical" : "${supportPivotCFTechResp}"
+            },
+        	"jira-status-mapping": {
+        		"statutsJira": ${supportPivotMappingStatus},
+        		"statutsDefault" : "${supportPivotDefaultStatus}"
+        	}
+          }
         }
-    	"status-mapping": {
-    		"statutsJira": ${supportPivotMappingStatus},
-    		"statutsDefault" : "${supportPivotDefaultStatut}"
-    	}
-      }
-    }
 
 
 Les paramètres spécifiques à l'application support sont les suivants :
@@ -99,7 +105,8 @@ Les paramètres spécifiques à l'application support sont les suivants :
     mod parameter           :  conf.properties variable         ,   usage
     -------------------------------------------------------------------------------------------------------------------
     -------------------------------------------------------------------------------------------------------------------
-    "default-collectivity"  : "${supportPivotDefCollectivity}"  , default collectivity name 
+    "collectivity"          : "${supportPivotCollectivity}"  , collectivity name 
+    "academy"               : "${supportPivotAcademy}"  , academy name
     "default-attribution"   : "${supportPivotDefAttribution}"   , default attribution among ENT, RECTORAT, CGI
     "default-tickettype"    : "${supportPivotDefTicketType}"    , default ticket type
     "default-priority"      : "${supportPivotDefTicketPriority}", default ticket priority
@@ -110,10 +117,12 @@ Les paramètres spécifiques à l'application support sont les suivants :
     -------------------------------------------------------------------------------------------------------------------
                 JIRA escalating
     -------------------------------------------------------------------------------------------------------------------
-    "jira-login"            : "${supportPivotJIRALogin"         , JIRA login 
-    "jira-passwd"           : "${supportPivotJIRAPwd}"          , JIRA password
-    "jira-host"             : "${supportPivotJIRAHost}"         , JIRA host
-    "jira-port"             : ${supportPivotJIRAPort}           , JIRA port
+    "jira-login"                : "${supportPivotJIRALogin"                 , JIRA login 
+    "jira-passwd"               : "${supportPivotJIRAPwd}"                  , JIRA password
+    "jira-host"                 : "${supportPivotJIRAHost}"                 , JIRA host  ex: http://mysite.com:8080/jira
+    "jira-project-key"          :  "${supportPivotJIRAProjectKey}"          , JIRA key of dest project
+    "jira-allowed-tickettype"   :  "${supportPivotJIRAAllowedTicketType}"   , JIRA TicketType for this project   
+    "jira-allowed-priority"     :  "${supportPivotJIRAAllowedPriority}"     , Order 3 priorities low, mid, high 
     -------------------------------------------------------------------------------------------------------------------
                 JIRA Custom fields used to display IWS informations
     -------------------------------------------------------------------------------------------------------------------
