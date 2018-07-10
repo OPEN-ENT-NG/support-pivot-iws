@@ -54,7 +54,7 @@ pré-requis : un mail sender doit être configurer sur la plateforme.
 Contenu du fichier deployment/support/conf.json.template :
 
      {
-          "name": "fr.openent~supportpivot~0.2-SNAPSHOT",
+          "name": "fr.openent~supportpivot~1.0.0",
           "config": {
             "main" : "fr.openent.supportpivot.Supportpivot",
             "port" : 9595,
@@ -121,8 +121,8 @@ Les paramètres spécifiques à l'application support sont les suivants :
     "jira-passwd"               : "${supportPivotJIRAPwd}"                  , JIRA password
     "jira-host"                 : "${supportPivotJIRAHost}"                 , JIRA host  ex: http://mysite.com:8080/jira
     "jira-project-key"          :  "${supportPivotJIRAProjectKey}"          , JIRA key of dest project
-    "jira-allowed-tickettype"   :  "${supportPivotJIRAAllowedTicketType}"   , JIRA TicketType for this project   
-    "jira-allowed-priority"     :  "${supportPivotJIRAAllowedPriority}"     , Order 3 priorities low, mid, high 
+    "jira-allowed-tickettype"   :  "${supportPivotJIRAAllowedTicketType}"   , JIRA icket type i.e [bug, task] 
+    "jira-allowed-priority"     :  "${supportPivotJIRAAllowedPriority}"     , Order 3 priorities [low, mid, high]
     -------------------------------------------------------------------------------------------------------------------
                 JIRA Custom fields used to display IWS informations
     -------------------------------------------------------------------------------------------------------------------
