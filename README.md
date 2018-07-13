@@ -54,7 +54,7 @@ pré-requis : un mail sender doit être configurer sur la plateforme.
 Contenu du fichier deployment/support/conf.json.template :
 
      {
-          "name": "fr.openent~supportpivot~1.1-SNAPSHOT",
+          "name": "fr.openent~supportpivot~1.0.1",
           "config": {
             "main" : "fr.openent.supportpivot.Supportpivot",
             "port" : 9595,
