@@ -192,7 +192,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
     private void saveTicketToMongo(final String source, JsonObject jsonPivot) {
 
-        DateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         Date date = new Date();
         jsonPivot.put("source", source);
         jsonPivot.put("date", dateFormat.format(date));
