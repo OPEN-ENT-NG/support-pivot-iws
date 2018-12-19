@@ -30,7 +30,7 @@
             "id_ent" : "${supportPivotCFIdEnt}",
             "id_iws" : "${supportPivotCFIdIws}",
             "status_ent" : "${supportPivotCFStEnt}",
-            "status_iws" : "${supportPivotCFStIws}",
+            "status_iws" : ${supportPivotCFStIws},
             "creation" : "${supportPivotCFCreateDate}",
             "resolution_ent" : "${supportPivotCFResEnt}",
             "resolution_iws" : "${supportPivotCFResIws}",
