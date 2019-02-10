@@ -1,8 +1,8 @@
-# À propos de l'application Support
+# À propos de l'application SupportPivot
 
-* Licence : [AGPL v3](http://www.gnu.org/licenses/agpl.txt) - Copyright Conseil Régional Nord Pas de Calais - Picardie, Conseil départemental de l'Essonne, Conseil régional d'Aquitaine-Limousin-Poitou-Charentes, , Conseil départemental de Seine-Et-Marne, Conseil régional d'Île-de-France, Ville de Paris
+* Licence : [AGPL v3](http://www.gnu.org/licenses/agpl.txt) - Copyright Ville de Paris
 * Développeur(s) : CGI
-* Financeur(s) : Région Nord Pas de Calais-Picardie,  Département 91, Région Aquitaine-Limousin-Poitou-Charentes, Département 77, Région Île-de-France, Ville de Paris
+* Financeur(s) : Région Ville de Paris
 * Description : Application permettant l'automatisation de l'échange de tickets support entre l'application support de l'ENT, l'outil IWS, et JIRA. 
 
 ## Déployer dans ent-core
@@ -49,7 +49,7 @@ Le module exploite
 
 ## Configuration
 
-pré-requis : un mail sender doit être configurer sur la plateforme.
+pré-requis : un mail sender doit être configuré sur la plateforme.
 
 Contenu du fichier deployment/support/conf.json.template :
 
@@ -121,10 +121,11 @@ Les paramètres spécifiques à l'application support sont les suivants :
     "jira-passwd"               : "${supportPivotJIRAPwd}"                  , JIRA password
     "jira-host"                 : "${supportPivotJIRAHost}"                 , JIRA host  ex: http://mysite.com:8080/jira
     "jira-project-key"          :  "${supportPivotJIRAProjectKey}"          , JIRA key of dest project
-    "jira-allowed-tickettype"   :  "${supportPivotJIRAAllowedTicketType}"   , JIRA icket type i.e [bug, task] 
+    "jira-allowed-tickettype"   :  "${supportPivotJIRAAllowedTicketType}"   , JIRA ticket type i.e [bug, task] 
     "jira-allowed-priority"     :  "${supportPivotJIRAAllowedPriority}"     , Order 3 priorities [low, mid, high]
     -------------------------------------------------------------------------------------------------------------------
                 JIRA Custom fields used to display IWS informations
+                All theses customs fields have to be defined in JIRA for the screens 
     -------------------------------------------------------------------------------------------------------------------
     "id_ent"                : "${supportPivotCFIdEnt}"          , Jira field id for ENT id of the ticket
     "id_iws"                : "${supportPivotCFIdIws}"          , Jira field id for IWS id of the ticket

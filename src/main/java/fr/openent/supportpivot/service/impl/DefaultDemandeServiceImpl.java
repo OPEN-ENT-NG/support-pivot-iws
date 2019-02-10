@@ -1,3 +1,21 @@
+/*
+ *
+ * Copyright (c) Mairie de Paris, CGI, 2016.
+ * This file is part of OPEN ENT NG. OPEN ENT NG is a versatile ENT Project based on the JVM and ENT Core Project.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation (version 3 of the License).
+ * For the sake of explanation, any module that communicate over native
+ * Web protocols, such as HTTP, with OPEN ENT NG is outside the scope of this
+ * license and could be license under its own terms. This is merely considered
+ * normal use of OPEN ENT NG, and does not fall under the heading of "covered work".
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ */
+
 package fr.openent.supportpivot.service.impl;
 
 import fr.openent.supportpivot.Supportpivot;
@@ -65,7 +83,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * Check every mandatory field is present in jsonPivot, then send for treatment
      * @param jsonPivot JSON object in PIVOT format
      */
-    public void addIWS(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
+    public void treatTicketFromIWS(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
         saveTicketToMongo(Supportpivot.ATTRIBUTION_IWS, jsonPivot);
 
@@ -93,7 +111,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * - Replace modules names
      * @param jsonPivot JSON object in PIVOT format
      */
-    public void addENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
+    public void treatTicketFromENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
         saveTicketToMongo(Supportpivot.ATTRIBUTION_ENT, jsonPivot);
 
@@ -229,6 +247,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                     sendToENT(jsonPivot, handler);
                     sentToEnt = true;
                 }
+                //TODO  ici il y a un problème : l'état de la maj de l'ENt est renvoyée vers IWS mais l'algo se proursuit
+                //vers la maj de JIRA. ENT peut être KO, mais JIRA se mete à jour quand même, ou alors JIRA est KO mais IWS n'est pas averti
                 if(Supportpivot.ATTRIBUTION_CGI.equals(attribution) || (jsonPivot.containsKey(Supportpivot.IDJIRA_FIELD)
                         && !jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty())) {
                     Handler<Either<String,JsonObject>> newHandler;
@@ -297,24 +317,25 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
     /**
      * Send pivot information to JIRA
-     * @param jsonPivot JSON in pivot format
+     * @param jsonPivotIn JSON in pivot format
      */
-    private void sendToJIRA(final HttpServerRequest request, JsonObject jsonPivot,
+    private void sendToJIRA(final HttpServerRequest request, JsonObject jsonPivotIn,
                             final Handler<Either<String, JsonObject>> handler) {
-        final boolean ticketExists = (jsonPivot.containsKey(Supportpivot.IDJIRA_FIELD)
-                && !jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty());
-        jiraService.sendToJIRA(jsonPivot, stringJsonObjectEither -> {
-            if (stringJsonObjectEither.isRight()) {
-                if(!ticketExists) {
+        final boolean ticketAlreadyExistsInJira = (jsonPivotIn.containsKey(Supportpivot.IDJIRA_FIELD)
+                && !jsonPivotIn.getString(Supportpivot.IDJIRA_FIELD).isEmpty());
+        jiraService.sendToJIRA(jsonPivotIn, eitherJsonPivotOut -> {
+            if (eitherJsonPivotOut.isRight()) {
+                if(!ticketAlreadyExistsInJira) {
+
                     //return to IWS ticket with Id_JIRA
                     sendToIWS(request,
-                            stringJsonObjectEither.right().getValue().getJsonObject("jsonPivotCompleted"),
+                            eitherJsonPivotOut.right().getValue().getJsonObject("jsonPivotCompleted"),
                             handler);
                 } else {
                     handler.handle(new Either.Right<>(new JsonObject().put("status", "OK")));
                 }
             } else {
-                handler.handle(stringJsonObjectEither);
+                handler.handle(eitherJsonPivotOut);
             }
         });
     }
@@ -462,13 +483,13 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * @param idJira idJira updated in Jira to send to IWS
      */
     @Override
-    public void updateJiraToIWS(final HttpServerRequest request,
-                                final String idJira,
-                                final Handler<Either<String, JsonObject>> handler) {
+    public void sendJiraTicketToIWS(final HttpServerRequest request,
+                                    final String idJira,
+                                    final Handler<Either<String, JsonObject>> handler) {
 
 
 
-        jiraService.getTicketUpdatedToIWS(request, idJira, stringJsonObjectEither -> {
+        jiraService.getFromJira(request, idJira, stringJsonObjectEither -> {
             if (stringJsonObjectEither.isRight()) {
                 JsonObject jsonPivot = stringJsonObjectEither.right().getValue();
                 saveTicketToMongo(Supportpivot.ATTRIBUTION_CGI, jsonPivot);
