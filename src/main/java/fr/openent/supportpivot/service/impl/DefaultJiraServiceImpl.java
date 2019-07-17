@@ -18,7 +18,6 @@
 
 package fr.openent.supportpivot.service.impl;
 
-import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.service.JiraService;
 import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;
@@ -43,6 +42,8 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+
+import static fr.openent.supportpivot.constants.PivotConstants.*;
 
 /**
  * Created by mercierq on 09/02/2018.
@@ -87,9 +88,9 @@ public class DefaultJiraServiceImpl implements JiraService {
             jira_host_uri = new URI(config.getString("jira-host"));
         } catch (URISyntaxException e) {
             LOGGER.error("Bad parameter ent-core.json#jira-host ", e);
-            //TODO Break module starting
         }
         this.JIRA_HOST = jira_host_uri;
+        assert JIRA_HOST != null;
 
         URI jira_rest_uri = null;
         try {
@@ -99,6 +100,7 @@ public class DefaultJiraServiceImpl implements JiraService {
             //TODO Break module starting
         }
         this.JIRA_REST_API_URI = jira_rest_uri;
+        assert JIRA_REST_API_URI != null;
 
         this.JIRA_PROJECT_NAME = config.getString("jira-project-key");
         this.COLLECTIVITY_NAME = config.getString("collectivity");
@@ -147,21 +149,21 @@ public class DefaultJiraServiceImpl implements JiraService {
     public void sendToJIRA(final JsonObject jsonPivotIn, final Handler<Either<String, JsonObject>> handler) {
 
         //ID_IWS is mandatory
-        if (!jsonPivotIn.containsKey(Supportpivot.IDIWS_FIELD)
-                || jsonPivotIn.getString(Supportpivot.IDIWS_FIELD).isEmpty()) {
+        if (!jsonPivotIn.containsKey(IDIWS_FIELD)
+                || jsonPivotIn.getString(IDIWS_FIELD).isEmpty()) {
 
-            handler.handle(new Either.Left<>("2;Mandatory Field " + Supportpivot.IDIWS_FIELD));
+            handler.handle(new Either.Left<>("2;Mandatory Field " + IDIWS_FIELD));
             return;
         }
 
         //TITLE  is mandatory : TITLE = ID_IWS if not present
-        if (!jsonPivotIn.containsKey(Supportpivot.TITLE_FIELD) || jsonPivotIn.getString(Supportpivot.TITLE_FIELD).isEmpty() ){
-            jsonPivotIn.put(Supportpivot.TITLE_FIELD, jsonPivotIn.getString(Supportpivot.IDIWS_FIELD));
+        if (!jsonPivotIn.containsKey(TITLE_FIELD) || jsonPivotIn.getString(TITLE_FIELD).isEmpty() ){
+            jsonPivotIn.put(TITLE_FIELD, jsonPivotIn.getString(IDIWS_FIELD));
         }
 
-        if (jsonPivotIn.containsKey(Supportpivot.IDJIRA_FIELD)
-            && !jsonPivotIn.getString(Supportpivot.IDJIRA_FIELD).isEmpty()) {
-            String jiraTicketId = jsonPivotIn.getString(Supportpivot.IDJIRA_FIELD);
+        if (jsonPivotIn.containsKey(IDJIRA_FIELD)
+            && !jsonPivotIn.getString(IDJIRA_FIELD).isEmpty()) {
+            String jiraTicketId = jsonPivotIn.getString(IDJIRA_FIELD);
             updateJiraTicket(jsonPivotIn, jiraTicketId, handler);
         } else {
             createJiraTicket(jsonPivotIn, handler);
@@ -174,34 +176,34 @@ public class DefaultJiraServiceImpl implements JiraService {
 
         //Ticket Type
         String ticketType = DEFAULT_JIRA_TICKETTYPE;
-        if (jsonPivotIn.containsKey(Supportpivot.TICKETTYPE_FIELD)
-                && JIRA_ALLOWED_TICKETTYPE.contains(jsonPivotIn.getString(Supportpivot.TICKETTYPE_FIELD))) {
-            ticketType = jsonPivotIn.getString(Supportpivot.TICKETTYPE_FIELD);
+        if (jsonPivotIn.containsKey(TICKETTYPE_FIELD)
+                && JIRA_ALLOWED_TICKETTYPE.contains(jsonPivotIn.getString(TICKETTYPE_FIELD))) {
+            ticketType = jsonPivotIn.getString(TICKETTYPE_FIELD);
         }
 
         // priority PIVOT -> JIRA
-        String jsonPriority = jsonPivotIn.getString(Supportpivot.PRIORITY_FIELD);
-        if(!Supportpivot.PIVOT_PRIORITY_LEVEL.contains(jsonPriority)){
+        String jsonPriority = jsonPivotIn.getString(PRIORITY_FIELD);
+        if(!PIVOT_PRIORITY_LEVEL.contains(jsonPriority)){
             jsonPriority = DEFAULT_PRIORITY;
         }
-        String currentPriority = JIRA_ALLOWED_PRIORITY.getString(Supportpivot.PIVOT_PRIORITY_LEVEL.indexOf(jsonPriority));
+        String currentPriority = JIRA_ALLOWED_PRIORITY.getString(PIVOT_PRIORITY_LEVEL.indexOf(jsonPriority));
 
         jsonJiraTicket.put("fields", new JsonObject()
                 .put("project", new JsonObject()
                         .put("key", JIRA_PROJECT_NAME))
-                .put("summary", jsonPivotIn.getString(Supportpivot.TITLE_FIELD))
-                .put("description", jsonPivotIn.getString(Supportpivot.DESCRIPTION_FIELD))
+                .put("summary", jsonPivotIn.getString(TITLE_FIELD))
+                .put("description", jsonPivotIn.getString(DESCRIPTION_FIELD))
                 .put("issuetype", new JsonObject()
                         .put("name", ticketType))
-                .put("labels", jsonPivotIn.getJsonArray(Supportpivot.MODULES_FIELD))
-                .put(JIRA_FIELD.getString("id_ent"), jsonPivotIn.getString(Supportpivot.IDENT_FIELD))
-                .put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(Supportpivot.IDIWS_FIELD))
-                .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(Supportpivot.STATUSENT_FIELD))
-                .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(Supportpivot.STATUSIWS_FIELD))
-                .put(JIRA_FIELD.getString("creation"), jsonPivotIn.getString(Supportpivot.DATE_CREA_FIELD))
-                .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(Supportpivot.DATE_RESOENT_FIELD))
-                .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(Supportpivot.DATE_RESOIWS_FIELD))
-                .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(Supportpivot.CREATOR_FIELD))
+                .put("labels", jsonPivotIn.getJsonArray(MODULES_FIELD))
+                .put(JIRA_FIELD.getString("id_ent"), jsonPivotIn.getString(IDENT_FIELD))
+                .put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDIWS_FIELD))
+                .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD))
+                .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD))
+                .put(JIRA_FIELD.getString("creation"), jsonPivotIn.getString(DATE_CREA_FIELD))
+                .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESOENT_FIELD))
+                .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
+                .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(CREATOR_FIELD))
                 .put("priority", new JsonObject()
                         .put("name", currentPriority)));
 
@@ -210,13 +212,13 @@ public class DefaultJiraServiceImpl implements JiraService {
                 response -> {
                     // HTTP Status Code 201: The request has been fulfilled and has resulted in one or more new resources being created.
                     if (response.statusCode() == HTTP_STATUS_201_CREATED) {
-                        final JsonArray jsonJiraComments = jsonPivotIn.getJsonArray(Supportpivot.COMM_FIELD);
+                        final JsonArray jsonJiraComments = jsonPivotIn.getJsonArray(COMM_FIELD);
 
                         updateComments(response, jsonPivotIn, jsonJiraComments,
                                 EitherCommentaires -> {
                                     if (EitherCommentaires.isRight()) {
                                         JsonObject jsonPivotCompleted = EitherCommentaires.right().getValue().getJsonObject("jsonPivotCompleted");
-                                        final JsonArray jsonJiraPJ = jsonPivotIn.getJsonArray(Supportpivot.ATTACHMENT_FIELD);
+                                        final JsonArray jsonJiraPJ = jsonPivotIn.getJsonArray(ATTACHMENT_FIELD);
                                         updateJiraPJ(jsonPivotCompleted, jsonJiraPJ, jsonPivotIn, handler);
                                     } else {
                                         handler.handle(new Either.Left<>(
@@ -328,7 +330,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                             final JsonObject jsonPivot,
                             final Handler<Either<String, JsonObject>> handler) {
 
-        String idJira = jsonPivotCompleted.getString(Supportpivot.IDJIRA_FIELD);
+        String idJira = jsonPivotCompleted.getString(IDJIRA_FIELD);
 
         LinkedList<JsonObject> pjLinkedList = new LinkedList<>();
 
@@ -403,7 +405,7 @@ public class DefaultJiraServiceImpl implements JiraService {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            byte all[] = outputStream.toByteArray();
+            byte[] all = outputStream.toByteArray();
 
             postAttachmentsRequest.putHeader("Content-Length", all.length + "")
                     .write(Buffer.buffer(all));
@@ -438,7 +440,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                                 }
 
                                 //Is JIRA ticket had been created by same IWS issue ?
-                                String jsonPivotIdIWS = jsonPivotIn.getString(Supportpivot.IDIWS_FIELD);
+                                String jsonPivotIdIWS = jsonPivotIn.getString(IDIWS_FIELD);
                                 if(!jiraTicketIdIWS.equals(jsonPivotIdIWS)){
                                     handler.handle(new Either.Left<>("102;JIRA Ticket " + jiraTicketId + " already link with an another IWS issue"));
                                     return;
@@ -447,13 +449,13 @@ public class DefaultJiraServiceImpl implements JiraService {
                                 //Convert jsonPivotIn into jsonJiraTicket
                                 final JsonObject jsonJiraUpdateTicket = new JsonObject();
                                 jsonJiraUpdateTicket.put("fields", new JsonObject()
-                                        .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(Supportpivot.STATUSENT_FIELD))
-                                        .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(Supportpivot.STATUSIWS_FIELD))
-                                        .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(Supportpivot.DATE_RESOENT_FIELD))
-                                        .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(Supportpivot.DATE_RESOIWS_FIELD))
-                                        .put(("description"), jsonPivotIn.getString(Supportpivot.DESCRIPTION_FIELD))
-                                        .put("summary", jsonPivotIn.getString(Supportpivot.TITLE_FIELD))
-                                        .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(Supportpivot.CREATOR_FIELD)));
+                                        .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD))
+                                        .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD))
+                                        .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESOENT_FIELD))
+                                        .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
+                                        .put(("description"), jsonPivotIn.getString(DESCRIPTION_FIELD))
+                                        .put("summary", jsonPivotIn.getString(TITLE_FIELD))
+                                        .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(CREATOR_FIELD)));
 
                                 //Update Jira
                                 final URI urlUpdateJiraTicket = JIRA_REST_API_URI.resolve(jiraTicketId);
@@ -720,62 +722,60 @@ public class DefaultJiraServiceImpl implements JiraService {
 
             final JsonObject jsonPivot = new JsonObject();
 
-            jsonPivot.put(Supportpivot.IDJIRA_FIELD, jiraTicket.getString("key"));
+            jsonPivot.put(IDJIRA_FIELD, jiraTicket.getString("key"));
 
-            jsonPivot.put(Supportpivot.COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
-            jsonPivot.put(Supportpivot.ACADEMY_FIELD, ACADEMY_NAME);
+            jsonPivot.put(COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
+            jsonPivot.put(ACADEMY_FIELD, ACADEMY_NAME);
 
             if (fields.getString(JIRA_FIELD.getString("creator")) != null) {
-                jsonPivot.put(Supportpivot.CREATOR_FIELD,
+                jsonPivot.put(CREATOR_FIELD,
                         fields.getString(stringEncode(JIRA_FIELD.getString("creator"))));
             } else {
-                jsonPivot.put(Supportpivot.CREATOR_FIELD, "");
+                jsonPivot.put(CREATOR_FIELD, "");
             }
 
-            jsonPivot.put(Supportpivot.TICKETTYPE_FIELD, fields
+            jsonPivot.put(TICKETTYPE_FIELD, fields
                     .getJsonObject("issuetype").getString("name"));
-            jsonPivot.put(Supportpivot.TITLE_FIELD, fields.getString("summary"));
+            jsonPivot.put(TITLE_FIELD, fields.getString("summary"));
 
             if (fields.getString("description") != null) {
-                jsonPivot.put(Supportpivot.DESCRIPTION_FIELD,
+                jsonPivot.put(DESCRIPTION_FIELD,
                         fields.getString("description"));
             } else {
-                jsonPivot.put(Supportpivot.DESCRIPTION_FIELD, "");
+                jsonPivot.put(DESCRIPTION_FIELD, "");
             }
 
 
             String currentPriority = fields.getJsonObject("priority").getString("name");
             switch (currentPriority) {
-                case "Lowest":
-                case "Mineure":
-                    currentPriority = "Mineur";
-                    break;
                 case "High":
                 case "Majeure":
-                    currentPriority = "Majeur";
+                    currentPriority = PRIORITY_MAJOR;
                     break;
                 case "Highest":
                 case "Bloquante":
-                    currentPriority = "Bloquant";
+                    currentPriority = PRIORITY_BLOCKING;
                     break;
+                case "Lowest":
+                case "Mineure":
                 default:
-                    currentPriority = "Mineur";
+                    currentPriority = PRIORITY_MINOR;
                     break;
             }
 
-            jsonPivot.put(Supportpivot.PRIORITY_FIELD, currentPriority);
+            jsonPivot.put(PRIORITY_FIELD, currentPriority);
 
-            jsonPivot.put(Supportpivot.MODULES_FIELD, fields.getJsonArray("labels"));
+            jsonPivot.put(MODULES_FIELD, fields.getJsonArray("labels"));
 
             if (fields.getString(JIRA_FIELD.getString("id_ent")) != null) {
-                jsonPivot.put(Supportpivot.IDENT_FIELD,
+                jsonPivot.put(IDENT_FIELD,
                         fields.getString(JIRA_FIELD.getString("id_ent")));
             } else {
-                jsonPivot.put(Supportpivot.IDENT_FIELD, "");
+                jsonPivot.put(IDENT_FIELD, "");
             }
 
             if (fields.getString(JIRA_FIELD.getString("id_iws")) != null) {
-                jsonPivot.put(Supportpivot.IDIWS_FIELD,
+                jsonPivot.put(IDIWS_FIELD,
                         fields.getString(JIRA_FIELD.getString("id_iws")));
             }
 
@@ -790,14 +790,14 @@ public class DefaultJiraServiceImpl implements JiraService {
                     jsonCommentArray.add(commentFormated);
                 }
             }
-            jsonPivot.put(Supportpivot.COMM_FIELD, jsonCommentArray);
+            jsonPivot.put(COMM_FIELD, jsonCommentArray);
 
             if (fields.getString(JIRA_FIELD.getString("status_ent")) != null) {
-                jsonPivot.put(Supportpivot.STATUSENT_FIELD,
+                jsonPivot.put(STATUSENT_FIELD,
                         fields.getString(JIRA_FIELD.getString("status_ent")));
             }
             if (fields.getString(JIRA_FIELD.getString("status_iws")) != null) {
-                jsonPivot.put(Supportpivot.STATUSIWS_FIELD,
+                jsonPivot.put(STATUSIWS_FIELD,
                         fields.getString(JIRA_FIELD.getString("status_iws")));
             }
 
@@ -812,34 +812,34 @@ public class DefaultJiraServiceImpl implements JiraService {
                 }
             }
 
-            jsonPivot.put(Supportpivot.STATUSJIRA_FIELD, currentStatusToIWS);
+            jsonPivot.put(STATUSJIRA_FIELD, currentStatusToIWS);
 
             if (fields.getString(JIRA_FIELD.getString("creation")) != null) {
-                jsonPivot.put(Supportpivot.DATE_CREA_FIELD,
+                jsonPivot.put(DATE_CREA_FIELD,
                         fields.getString(JIRA_FIELD.getString("creation")));
             }
 
             if (fields.getString(JIRA_FIELD.getString("resolution_iws")) != null) {
-                jsonPivot.put(Supportpivot.DATE_RESOIWS_FIELD,
+                jsonPivot.put(DATE_RESOIWS_FIELD,
                         fields.getString(JIRA_FIELD.getString("resolution_iws")));
             }
 
             if (fields.getString(JIRA_FIELD.getString("resolution_ent")) != null) {
-                jsonPivot.put(Supportpivot.DATE_RESOENT_FIELD,
+                jsonPivot.put(DATE_RESOENT_FIELD,
                         fields.getString(JIRA_FIELD.getString("resolution_ent")));
             }
 
             if (fields.getString("resolutiondate") != null) {
                 String dateFormated = getDateFormatted(fields.getString("resolutiondate"), false);
-                jsonPivot.put(Supportpivot.DATE_RESOJIRA_FIELD, dateFormated);
+                jsonPivot.put(DATE_RESOJIRA_FIELD, dateFormated);
             }
 
             if (fields.getString(JIRA_FIELD.getString("response_technical")) != null) {
-                jsonPivot.put(Supportpivot.TECHNICAL_RESP_FIELD,
+                jsonPivot.put(TECHNICAL_RESP_FIELD,
                         fields.getString(JIRA_FIELD.getString("response_technical")));
             }
 
-            jsonPivot.put(Supportpivot.ATTRIBUTION_FIELD, Supportpivot.ATTRIBUTION_IWS);
+            jsonPivot.put(ATTRIBUTION_FIELD, ATTRIBUTION_IWS);
 
             JsonArray attachments = fields.getJsonArray("attachment", new fr.wseduc.webutils.collections.JsonArray());
 
@@ -859,8 +859,8 @@ public class DefaultJiraServiceImpl implements JiraService {
                             if (getJiraPjResp.isRight()) {
                                 String b64FilePJ = getJiraPjResp.right().getValue().getString("b64Attachment");
                                 JsonObject currentPJ = new JsonObject();
-                                currentPJ.put(Supportpivot.ATTACHMENT_NAME_FIELD, attachmentInfos.getString("filename"));
-                                currentPJ.put(Supportpivot.ATTACHMENT_CONTENT_FIELD, b64FilePJ);
+                                currentPJ.put(ATTACHMENT_NAME_FIELD, attachmentInfos.getString("filename"));
+                                currentPJ.put(ATTACHMENT_CONTENT_FIELD, b64FilePJ);
                                 allPJConverted.add(currentPJ);
                             } else {
                                 handler.handle(getJiraPjResp);
@@ -868,7 +868,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
                             //last attachment handles the response
                             if (nbAttachment.decrementAndGet() <= 0) {
-                                jsonPivot.put(Supportpivot.ATTACHMENT_FIELD, allPJConverted);
+                                jsonPivot.put(ATTACHMENT_FIELD, allPJConverted);
                                 responseSent.set(true);
                                 handler.handle(new Either.Right<>(jsonPivot));
                             }

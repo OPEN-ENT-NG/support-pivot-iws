@@ -70,7 +70,8 @@ public class SupportController extends ControllerHelper{
     @SecuredAction("supportpivot.ws.demande")
     public void IWSEntryEndpoint(final HttpServerRequest request) {
         //TODO return errorcode 1 if non JSON body
-        RequestUtils.bodyToJson(request, resource -> demandeService.treatTicketFromIWS(request, resource, getDefaultResponseHandler(request)));
+        RequestUtils.bodyToJson(request, resource -> demandeService.treatTicketFromIWS(request, resource,
+                getDefaultResponseHandler(request)));
     }
 
     /**

@@ -18,7 +18,6 @@
 
 package fr.openent.supportpivot.service.impl;
 
-import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.service.DemandeService;
 import fr.openent.supportpivot.service.JiraService;
 import fr.wseduc.mongodb.MongoDb;
@@ -40,6 +39,7 @@ import java.util.Date;
 
 import static fr.wseduc.webutils.Server.getEventBus;
 import static fr.wseduc.webutils.Utils.handlerToAsyncHandler;
+import static fr.openent.supportpivot.constants.PivotConstants.*;
 
 /**
  * Created by colenot on 07/12/2017.
@@ -85,10 +85,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      */
     public void treatTicketFromIWS(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        saveTicketToMongo(Supportpivot.ATTRIBUTION_IWS, jsonPivot);
+        saveTicketToMongo(ATTRIBUTION_IWS, jsonPivot);
 
         StringBuilder missingMandatoryFields = new StringBuilder();
-        for( String field : Supportpivot.IWS_MANDATORY_FIELDS ) {
+        for( String field : IWS_MANDATORY_FIELDS ) {
             if( ! jsonPivot.containsKey(field) ) {
                 missingMandatoryFields.append(field);
                 missingMandatoryFields.append(", ");
@@ -99,7 +99,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             handler.handle(new Either.Left<>("2;Mandatory Field "+ missingMandatoryFields));
         }
         else {
-            add(request, jsonPivot, Supportpivot.ATTRIBUTION_IWS, handler);
+            add(request, jsonPivot, ATTRIBUTION_IWS, handler);
         }
 
     }
@@ -113,10 +113,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      */
     public void treatTicketFromENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        saveTicketToMongo(Supportpivot.ATTRIBUTION_ENT, jsonPivot);
+        saveTicketToMongo(ATTRIBUTION_ENT, jsonPivot);
 
         StringBuilder missingMandatoryFields = new StringBuilder();
-        for( String field : Supportpivot.ENT_MANDATORY_FIELDS ) {
+        for( String field : ENT_MANDATORY_FIELDS ) {
             if( ! jsonPivot.containsKey(field) ) {
                 missingMandatoryFields.append(field);
                 missingMandatoryFields.append(", ");
@@ -128,47 +128,47 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
         }
         else {
-            if( !jsonPivot.containsKey(Supportpivot.COLLECTIVITY_FIELD) ) {
-                jsonPivot.put(Supportpivot.COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
+            if( !jsonPivot.containsKey(COLLECTIVITY_FIELD) ) {
+                jsonPivot.put(COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
             }
-            if( !jsonPivot.containsKey(Supportpivot.ATTRIBUTION_FIELD) ) {
-                jsonPivot.put(Supportpivot.ATTRIBUTION_FIELD, ATTRIBUTION_DEFAULT);
+            if( !jsonPivot.containsKey(ATTRIBUTION_FIELD) ) {
+                jsonPivot.put(ATTRIBUTION_FIELD, ATTRIBUTION_DEFAULT);
             }
-            if( !jsonPivot.containsKey(Supportpivot.TICKETTYPE_FIELD) ) {
-                jsonPivot.put(Supportpivot.TICKETTYPE_FIELD, TICKETTYPE_DEFAULT);
+            if( !jsonPivot.containsKey(TICKETTYPE_FIELD) ) {
+                jsonPivot.put(TICKETTYPE_FIELD, TICKETTYPE_DEFAULT);
             }
-            if( !jsonPivot.containsKey(Supportpivot.PRIORITY_FIELD) ) {
-                jsonPivot.put(Supportpivot.PRIORITY_FIELD, PRIORITY_DEFAULT);
+            if( !jsonPivot.containsKey(PRIORITY_FIELD) ) {
+                jsonPivot.put(PRIORITY_FIELD, PRIORITY_DEFAULT);
             }
-            if( jsonPivot.containsKey(Supportpivot.DATE_CREA_FIELD) ) {
-                String sqlDate = jsonPivot.getString(Supportpivot.DATE_CREA_FIELD);
-                jsonPivot.put(Supportpivot.DATE_CREA_FIELD, formatSqlDate(sqlDate));
+            if( jsonPivot.containsKey(DATE_CREA_FIELD) ) {
+                String sqlDate = jsonPivot.getString(DATE_CREA_FIELD);
+                jsonPivot.put(DATE_CREA_FIELD, formatSqlDate(sqlDate));
             }
-            if( jsonPivot.containsKey(Supportpivot.STATUSENT_FIELD)
-                    && jsonPivot.getString(Supportpivot.STATUSENT_FIELD) != null
-                    && !jsonPivot.getString(Supportpivot.STATUSENT_FIELD).isEmpty()) {
+            if( jsonPivot.containsKey(STATUSENT_FIELD)
+                    && jsonPivot.getString(STATUSENT_FIELD) != null
+                    && !jsonPivot.getString(STATUSENT_FIELD).isEmpty()) {
                 String newStatus;
-                switch (jsonPivot.getString(Supportpivot.STATUSENT_FIELD)) {
-                    case Supportpivot.STATUSENT_NEW:
-                        newStatus = Supportpivot.STATUSPIVOT_NEW;
+                switch (jsonPivot.getString(STATUSENT_FIELD)) {
+                    case STATUSENT_NEW:
+                        newStatus = STATUSPIVOT_NEW;
                         break;
-                    case Supportpivot.STATUSENT_OPENED:
-                        newStatus = Supportpivot.STATUSPIVOT_OPENED;
+                    case STATUSENT_OPENED:
+                        newStatus = STATUSPIVOT_OPENED;
                         break;
-                    case Supportpivot.STATUSENT_RESOLVED:
-                        newStatus = Supportpivot.STATUSPIVOT_RESOLVED;
+                    case STATUSENT_RESOLVED:
+                        newStatus = STATUSPIVOT_RESOLVED;
                         break;
-                    case Supportpivot.STATUSENT_CLOSED:
-                        newStatus = Supportpivot.STATUSPIVOT_CLOSED;
+                    case STATUSENT_CLOSED:
+                        newStatus = STATUSPIVOT_CLOSED;
                         break;
                     default:
-                        newStatus = jsonPivot.getString(Supportpivot.STATUSENT_FIELD);
+                        newStatus = jsonPivot.getString(STATUSENT_FIELD);
                 }
-                jsonPivot.put(Supportpivot.STATUSENT_FIELD, newStatus);
+                jsonPivot.put(STATUSENT_FIELD, newStatus);
 
             }
 
-            JsonArray modules = jsonPivot.getJsonArray(Supportpivot.MODULES_FIELD, new fr.wseduc.webutils.collections.JsonArray());
+            JsonArray modules = jsonPivot.getJsonArray(MODULES_FIELD, new fr.wseduc.webutils.collections.JsonArray());
             JsonArray newModules = new fr.wseduc.webutils.collections.JsonArray();
             for(Object o : modules){
                 if( o instanceof String ) {
@@ -176,8 +176,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                     newModules.add(moduleEntToPivot(module));
                 }
             }
-            jsonPivot.put(Supportpivot.MODULES_FIELD, newModules);
-            add(null, jsonPivot, Supportpivot.ATTRIBUTION_ENT, handler);
+            jsonPivot.put(MODULES_FIELD, newModules);
+            add(null, jsonPivot, ATTRIBUTION_ENT, handler);
         }
     }
 
@@ -188,7 +188,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * @return PIVOT-like module name encoded in UTF-8
      */
     private String moduleEntToPivot(String moduleName) {
-        return Supportpivot.applicationsMap.getOrDefault(moduleName, "Autres");
+        return APPLICATIONS_MAP.getOrDefault(moduleName, "Autres");
     }
 
     /**
@@ -230,27 +230,27 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private void add(final HttpServerRequest request, JsonObject jsonPivot,
                      final String source, final Handler<Either<String, JsonObject>> handler) {
 
-        String attribution = jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD);
-        if( !Supportpivot.ATTRIBUTION_CGI.equals(attribution)
-                && !Supportpivot.ATTRIBUTION_ENT.equals(attribution)
-                && !Supportpivot.ATTRIBUTION_IWS.equals(attribution))
+        String attribution = jsonPivot.getString(ATTRIBUTION_FIELD);
+        if( !ATTRIBUTION_CGI.equals(attribution)
+                && !ATTRIBUTION_ENT.equals(attribution)
+                && !ATTRIBUTION_IWS.equals(attribution))
         {
-            handler.handle(new Either.Left<>("3;Invalid value for "+Supportpivot.ATTRIBUTION_FIELD ));
+            handler.handle(new Either.Left<>("3;Invalid value for "+ATTRIBUTION_FIELD ));
             return;
         }
 
         switch(source) {
-            case Supportpivot.ATTRIBUTION_IWS:
+            case ATTRIBUTION_IWS:
                 boolean sentToEnt = false;
-                if(jsonPivot.containsKey(Supportpivot.IDENT_FIELD)
-                        && !jsonPivot.getString(Supportpivot.IDENT_FIELD).isEmpty()) {
+                if(jsonPivot.containsKey(IDENT_FIELD)
+                        && !jsonPivot.getString(IDENT_FIELD).isEmpty()) {
                     sendToENT(jsonPivot, handler);
                     sentToEnt = true;
                 }
                 //TODO  ici il y a un problème : l'état de la maj de l'ENt est renvoyée vers IWS mais l'algo se proursuit
                 //vers la maj de JIRA. ENT peut être KO, mais JIRA se mete à jour quand même, ou alors JIRA est KO mais IWS n'est pas averti
-                if(Supportpivot.ATTRIBUTION_CGI.equals(attribution) || (jsonPivot.containsKey(Supportpivot.IDJIRA_FIELD)
-                        && !jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty())) {
+                if(ATTRIBUTION_CGI.equals(attribution) || (jsonPivot.containsKey(IDJIRA_FIELD)
+                        && !jsonPivot.getString(IDJIRA_FIELD).isEmpty())) {
                     Handler<Either<String,JsonObject>> newHandler;
                     if(sentToEnt) {
                         newHandler = jiraResponse -> {
@@ -265,10 +265,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 }
                 break;
 
-            case Supportpivot.ATTRIBUTION_ENT:
+            case ATTRIBUTION_ENT:
                 sendToIWS(request, jsonPivot, handler);
-                if(jsonPivot.containsKey(Supportpivot.IDJIRA_FIELD)
-                        && jsonPivot.getString(Supportpivot.IDJIRA_FIELD).isEmpty()) {
+                if(jsonPivot.containsKey(IDJIRA_FIELD)
+                        && jsonPivot.getString(IDJIRA_FIELD).isEmpty()) {
                     sendToJIRA(request, jsonPivot, jiraResponse -> {
                         if(jiraResponse.isLeft()) {
                             log.error("Supportpivot : could not save ticket to JIRA");
@@ -277,10 +277,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 }
                 break;
 
-            case Supportpivot.ATTRIBUTION_CGI:
+            case ATTRIBUTION_CGI:
                 sendToIWS(request, jsonPivot, handler);
-                if(jsonPivot.containsKey(Supportpivot.IDENT_FIELD)
-                        && jsonPivot.getString(Supportpivot.IDENT_FIELD).isEmpty()) {
+                if(jsonPivot.containsKey(IDENT_FIELD)
+                        && jsonPivot.getString(IDENT_FIELD).isEmpty()) {
                     sendToENT(jsonPivot, entResponse -> {
                         if(entResponse.isLeft()) {
                             log.error("Supportpivot : could not send JIRA ticket to ENT" + entResponse.left().getValue());
@@ -298,9 +298,9 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      */
     private void sendToENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        if(!jsonPivot.containsKey(Supportpivot.IDENT_FIELD)
-                || jsonPivot.getString(Supportpivot.IDENT_FIELD).isEmpty()) {
-            handler.handle(new Either.Left<>("2;Mandatory field " + Supportpivot.IDENT_FIELD));
+        if(!jsonPivot.containsKey(IDENT_FIELD)
+                || jsonPivot.getString(IDENT_FIELD).isEmpty()) {
+            handler.handle(new Either.Left<>("2;Mandatory field " + IDENT_FIELD));
             return;
         }
         eb.send(ENT_TRACKERUPDATE_ADDRESS,
@@ -321,8 +321,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      */
     private void sendToJIRA(final HttpServerRequest request, JsonObject jsonPivotIn,
                             final Handler<Either<String, JsonObject>> handler) {
-        final boolean ticketAlreadyExistsInJira = (jsonPivotIn.containsKey(Supportpivot.IDJIRA_FIELD)
-                && !jsonPivotIn.getString(Supportpivot.IDJIRA_FIELD).isEmpty());
+        final boolean ticketAlreadyExistsInJira = (jsonPivotIn.containsKey(IDJIRA_FIELD)
+                && !jsonPivotIn.getString(IDJIRA_FIELD).isEmpty());
         jiraService.sendToJIRA(jsonPivotIn, eitherJsonPivotOut -> {
             if (eitherJsonPivotOut.isRight()) {
                 if(!ticketAlreadyExistsInJira) {
@@ -354,21 +354,21 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
         StringBuilder mail = new StringBuilder()
             .append("<br/>Collectivite=")
-            .append(jsonPivot.getString(Supportpivot.COLLECTIVITY_FIELD))
+            .append(jsonPivot.getString(COLLECTIVITY_FIELD))
             .append("<br/>academie=")
-            .append(jsonPivot.getString(Supportpivot.ACADEMY_FIELD, ""))
+            .append(jsonPivot.getString(ACADEMY_FIELD, ""))
             .append("<br/>demandeur=")
-            .append(safeField(jsonPivot.getString(Supportpivot.CREATOR_FIELD)))
+            .append(safeField(jsonPivot.getString(CREATOR_FIELD)))
             .append("<br/>type_demande=")
-            .append(jsonPivot.getString(Supportpivot.TICKETTYPE_FIELD, ""))
+            .append(jsonPivot.getString(TICKETTYPE_FIELD, ""))
             .append("<br/>titre=")
-            .append(safeField(jsonPivot.getString(Supportpivot.TITLE_FIELD)))
+            .append(safeField(jsonPivot.getString(TITLE_FIELD)))
             .append("<br/>description=")
-            .append(safeField(jsonPivot.getString(Supportpivot.DESCRIPTION_FIELD)))
+            .append(safeField(jsonPivot.getString(DESCRIPTION_FIELD)))
             .append("<br/>priorite=")
-            .append(jsonPivot.getString(Supportpivot.PRIORITY_FIELD, ""));
+            .append(jsonPivot.getString(PRIORITY_FIELD, ""));
 
-        JsonArray modules =   jsonPivot.getJsonArray(Supportpivot.MODULES_FIELD, new fr.wseduc.webutils.collections.JsonArray());
+        JsonArray modules =   jsonPivot.getJsonArray(MODULES_FIELD, new fr.wseduc.webutils.collections.JsonArray());
         mail.append("<br/>modules=[");
         for(int i=0 ; i<modules.size();i++){
             if(i > 0) {
@@ -379,38 +379,38 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         mail.append("]");
 
         mail.append("<br/>id_jira=")
-            .append(jsonPivot.getString(Supportpivot.IDJIRA_FIELD, ""))
+            .append(jsonPivot.getString(IDJIRA_FIELD, ""))
             .append("<br/>id_ent=")
-            .append(jsonPivot.getString(Supportpivot.IDENT_FIELD, ""))
+            .append(jsonPivot.getString(IDENT_FIELD, ""))
             .append("<br/>id_iws=")
-            .append(jsonPivot.getString(Supportpivot.IDIWS_FIELD, ""));
+            .append(jsonPivot.getString(IDIWS_FIELD, ""));
 
-        JsonArray comm = jsonPivot.getJsonArray(Supportpivot.COMM_FIELD, new fr.wseduc.webutils.collections.JsonArray());
+        JsonArray comm = jsonPivot.getJsonArray(COMM_FIELD, new fr.wseduc.webutils.collections.JsonArray());
         for(int i=0 ; i<comm.size();i++){
             mail.append("<br/>commentaires=")
                     .append(safeField(comm.getString(i)));
         }
 
         mail.append("<br/>statut_iws=")
-            .append(jsonPivot.getString(Supportpivot.STATUSIWS_FIELD, ""))
+            .append(jsonPivot.getString(STATUSIWS_FIELD, ""))
             .append("<br/>statut_ent=")
-            .append(jsonPivot.getString(Supportpivot.STATUSENT_FIELD, ""))
+            .append(jsonPivot.getString(STATUSENT_FIELD, ""))
             .append("<br/>statut_jira=")
-            .append(jsonPivot.getString(Supportpivot.STATUSJIRA_FIELD, ""))
+            .append(jsonPivot.getString(STATUSJIRA_FIELD, ""))
             .append("<br/>date_creation=")
-            .append(jsonPivot.getString(Supportpivot.DATE_CREA_FIELD, ""))
+            .append(jsonPivot.getString(DATE_CREA_FIELD, ""))
             .append("<br/>date_resolution_iws=")
-            .append(jsonPivot.getString(Supportpivot.DATE_RESOIWS_FIELD, ""))
+            .append(jsonPivot.getString(DATE_RESOIWS_FIELD, ""))
             .append("<br/>date_resolution_ent=")
-            .append(jsonPivot.getString(Supportpivot.DATE_RESOENT_FIELD, ""))
+            .append(jsonPivot.getString(DATE_RESOENT_FIELD, ""))
             .append("<br/>date_resolution_jira=")
-            .append(jsonPivot.getString(Supportpivot.DATE_RESOJIRA_FIELD, ""))
+            .append(jsonPivot.getString(DATE_RESOJIRA_FIELD, ""))
             .append("<br/>reponse_technique=")
-            .append(safeField(jsonPivot.getString(Supportpivot.TECHNICAL_RESP_FIELD, "")))
+            .append(safeField(jsonPivot.getString(TECHNICAL_RESP_FIELD, "")))
             .append("<br/>reponse_client=")
-            .append(safeField(jsonPivot.getString(Supportpivot.CLIENT_RESP_FIELD, "")))
+            .append(safeField(jsonPivot.getString(CLIENT_RESP_FIELD, "")))
             .append("<br/>attribution=")
-            .append(jsonPivot.getString(Supportpivot.ATTRIBUTION_FIELD))
+            .append(jsonPivot.getString(ATTRIBUTION_FIELD))
             .append("<br/>");
 
         String mailTo = jsonPivot.getString("email");
@@ -422,25 +422,25 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         //prepare storage in mongo of sent mail to IWS
         JsonObject savedInfo = new JsonObject();
         savedInfo.put("mailContent", mail.toString());
-        savedInfo.put(Supportpivot.IDIWS_FIELD, jsonPivot.getString(Supportpivot.IDIWS_FIELD, ""));
-        savedInfo.put(Supportpivot.IDENT_FIELD, jsonPivot.getString(Supportpivot.IDENT_FIELD, ""));
-        savedInfo.put(Supportpivot.IDJIRA_FIELD, jsonPivot.getString(Supportpivot.IDJIRA_FIELD, ""));
+        savedInfo.put(IDIWS_FIELD, jsonPivot.getString(IDIWS_FIELD, ""));
+        savedInfo.put(IDENT_FIELD, jsonPivot.getString(IDENT_FIELD, ""));
+        savedInfo.put(IDJIRA_FIELD, jsonPivot.getString(IDJIRA_FIELD, ""));
         savedInfo.put("dest", mailTo);
 
         JsonArray mailAtts = new fr.wseduc.webutils.collections.JsonArray();
         JsonArray savedInfoPJ = new fr.wseduc.webutils.collections.JsonArray();
-        JsonArray atts = jsonPivot.getJsonArray(Supportpivot.ATTACHMENT_FIELD, new fr.wseduc.webutils.collections.JsonArray());
+        JsonArray atts = jsonPivot.getJsonArray(ATTACHMENT_FIELD, new fr.wseduc.webutils.collections.JsonArray());
         for (Object o : atts) {
             if( !(o instanceof JsonObject)) continue;
             JsonObject jsonAtt = (JsonObject)o;
-            if(!jsonAtt.containsKey(Supportpivot.ATTACHMENT_NAME_FIELD)
-                    || !jsonAtt.containsKey(Supportpivot.ATTACHMENT_CONTENT_FIELD)) continue;
+            if(!jsonAtt.containsKey(ATTACHMENT_NAME_FIELD)
+                    || !jsonAtt.containsKey(ATTACHMENT_CONTENT_FIELD)) continue;
             JsonObject att = new JsonObject();
-            att.put("name", jsonAtt.getString(Supportpivot.ATTACHMENT_NAME_FIELD));
-            att.put("content", jsonAtt.getString(Supportpivot.ATTACHMENT_CONTENT_FIELD));
+            att.put("name", jsonAtt.getString(ATTACHMENT_NAME_FIELD));
+            att.put("content", jsonAtt.getString(ATTACHMENT_CONTENT_FIELD));
             mailAtts.add(att);
 
-            savedInfoPJ.add(new JsonObject().put("pj_name", jsonAtt.getString(Supportpivot.ATTACHMENT_NAME_FIELD)));
+            savedInfoPJ.add(new JsonObject().put("pj_name", jsonAtt.getString(ATTACHMENT_NAME_FIELD)));
         }
         savedInfo.put("pj", savedInfoPJ);
 
@@ -492,8 +492,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         jiraService.getFromJira(request, idJira, stringJsonObjectEither -> {
             if (stringJsonObjectEither.isRight()) {
                 JsonObject jsonPivot = stringJsonObjectEither.right().getValue();
-                saveTicketToMongo(Supportpivot.ATTRIBUTION_CGI, jsonPivot);
-                add(request,jsonPivot , Supportpivot.ATTRIBUTION_CGI, handler);
+                saveTicketToMongo(ATTRIBUTION_CGI, jsonPivot);
+                add(request,jsonPivot , ATTRIBUTION_CGI, handler);
             } else {
                 handler.handle(new Either.Left<>(
                         "Error, the ticket has not been sent, it doesn't exist."));
