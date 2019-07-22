@@ -16,7 +16,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package fr.openent.supportpivot.service;
+package fr.openent.supportpivot.deprecatedservices;
 
 import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;
@@ -24,22 +24,31 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Created by mercierq on 09/02/2018.
- * Service to handle pivot information and send it to Jira
+ * Created by colenot on 07/12/2017.
+ *
+ * Service to handle pivot information and send at the right place
  */
-public interface JiraService {
+public interface DemandeService {
+
     /**
-     * Add issue from IWS to JIRA
+     * Add issue from IWS
+     * Check every mandatory field is present in jsonPivot, then send for treatment
+     * @param jsonPivot JSON object in PIVOT format
+     */
+    void treatTicketFromIWS(HttpServerRequest request, JsonObject jsonPivot, Handler<Either<String, JsonObject>> handler);
+
+    /**
+     * Add issue from ENT
      * - Check every mandatory field is present in jsonPivot, then send for treatment
      * - Replace empty values by default ones
      * - Replace modules names
      * @param jsonPivot JSON object in PIVOT format
      */
-    void sendToJIRA(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler);
+    void treatTicketFromENT(JsonObject jsonPivot, Handler<Either<String, JsonObject>> handler);
 
     /**
-     * Update issue from JIRA to IWS
-     * @param idJira String
+     * Send updated informations from a Jira ticket to IWS
+     * @param idJira idJira updated in Jira to sens to IWS
      */
-    void getFromJira(HttpServerRequest request, String idJira, final Handler<Either<String, JsonObject>> handler);
+    void sendJiraTicketToIWS(HttpServerRequest request, String idJira, Handler<Either<String, JsonObject>> handler);
 }

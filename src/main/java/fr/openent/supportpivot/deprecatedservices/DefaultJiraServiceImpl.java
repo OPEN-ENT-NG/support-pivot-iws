@@ -16,9 +16,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package fr.openent.supportpivot.service.impl;
+package fr.openent.supportpivot.deprecatedservices;
 
-import fr.openent.supportpivot.service.JiraService;
 import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -44,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import static fr.openent.supportpivot.constants.PivotConstants.*;
+import static fr.openent.supportpivot.Supportpivot.appConfig;
 
 /**
  * Created by mercierq on 09/02/2018.
@@ -57,7 +57,6 @@ public class DefaultJiraServiceImpl implements JiraService {
     private final String JIRA_AUTH_INFO;
     private final URI JIRA_REST_API_URI;
     private final String JIRA_PROJECT_NAME;
-    private final String COLLECTIVITY_NAME;
     private final String ACADEMY_NAME;
     private final String DEFAULT_JIRA_TICKETTYPE;
     private final String DEFAULT_PRIORITY;
@@ -103,7 +102,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         assert JIRA_REST_API_URI != null;
 
         this.JIRA_PROJECT_NAME = config.getString("jira-project-key");
-        this.COLLECTIVITY_NAME = config.getString("collectivity");
         this.ACADEMY_NAME = config.getString("academy");
         JIRA_FIELD = config.getJsonObject("jira-custom-fields");
         JIRA_STATUS_MAPPING = config.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
@@ -724,7 +722,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
             jsonPivot.put(IDJIRA_FIELD, jiraTicket.getString("key"));
 
-            jsonPivot.put(COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
+            jsonPivot.put(COLLECTIVITY_FIELD, appConfig.getDefaultCollectivity());
             jsonPivot.put(ACADEMY_FIELD, ACADEMY_NAME);
 
             if (fields.getString(JIRA_FIELD.getString("creator")) != null) {

@@ -18,16 +18,20 @@
 
 package fr.openent.supportpivot;
 
+import fr.openent.supportpivot.controllers.SupportPivotController;
+import fr.openent.supportpivot.managers.ConfigManager;
 import org.entcore.common.http.BaseServer;
 
-import java.util.*;
-
 public class Supportpivot extends BaseServer {
+
+	public static ConfigManager appConfig;
 
     @Override
 	public void start() throws Exception {
 		super.start();
-		addController(new SupportController());
+
+		appConfig = new ConfigManager(config);
+		addController(new SupportPivotController());
 	}
 
 }

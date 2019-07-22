@@ -16,11 +16,11 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package fr.openent.supportpivot.service.impl;
+package fr.openent.supportpivot.deprecatedservices;
 
-import fr.openent.supportpivot.service.DemandeService;
-import fr.openent.supportpivot.service.JiraService;
-import fr.wseduc.mongodb.MongoDb;
+import fr.openent.supportpivot.Supportpivot;
+import fr.openent.supportpivot.managers.ConfigManager;
+import fr.openent.supportpivot.services.MongoService;
 import fr.wseduc.webutils.Either;
 import fr.wseduc.webutils.email.EmailSender;
 import io.vertx.core.Handler;
@@ -32,7 +32,6 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -48,8 +47,6 @@ import static fr.openent.supportpivot.constants.PivotConstants.*;
  */
 public class DefaultDemandeServiceImpl implements DemandeService {
 
-    private static final String DEMANDE_COLLECTION = "support.demandes";
-    private final MongoDb mongo;
     private final EmailSender emailSender;
     private final Logger log = LoggerFactory.getLogger(DefaultDemandeServiceImpl.class);
 
@@ -62,16 +59,19 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private final String PRIORITY_DEFAULT;
 
     private final JiraService jiraService;
+    private MongoService mongoService;
 
     private static final String ENT_TRACKERUPDATE_ADDRESS = "support.update.bugtracker";
 
-    public DefaultDemandeServiceImpl(Vertx vertx, JsonObject config, EmailSender emailSender) {
-        this.mongo = MongoDb.getInstance();
+    public DefaultDemandeServiceImpl(Vertx vertx, JsonObject config, EmailSender emailSender,
+                                     MongoService mongoService) {
         this.emailSender = emailSender;
+        this.mongoService = mongoService;
 
         eb = getEventBus(vertx);
+        ConfigManager appConfig = Supportpivot.appConfig;
         this.MAIL_IWS = config.getString("mail-iws");
-        this.COLLECTIVITY_NAME = config.getString("collectivity");
+        this.COLLECTIVITY_NAME = appConfig.getDefaultCollectivity();
         this.ATTRIBUTION_DEFAULT = config.getString("default-attribution");
         this.TICKETTYPE_DEFAULT = config.getString("default-tickettype");
         this.PRIORITY_DEFAULT = config.getString("default-priority");
@@ -85,7 +85,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      */
     public void treatTicketFromIWS(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        saveTicketToMongo(ATTRIBUTION_IWS, jsonPivot);
+        mongoService.saveTicket(ATTRIBUTION_IWS, jsonPivot);
 
         StringBuilder missingMandatoryFields = new StringBuilder();
         for( String field : IWS_MANDATORY_FIELDS ) {
@@ -113,7 +113,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      */
     public void treatTicketFromENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        saveTicketToMongo(ATTRIBUTION_ENT, jsonPivot);
+        mongoService.saveTicket(ATTRIBUTION_ENT, jsonPivot);
 
         StringBuilder missingMandatoryFields = new StringBuilder();
         for( String field : ENT_MANDATORY_FIELDS ) {
@@ -206,20 +206,6 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             log.error("Supportpivot : invalid date format" + e.getMessage());
             return sqlDate;
         }
-    }
-
-    private void saveTicketToMongo(final String source, JsonObject jsonPivot) {
-
-        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-        Date date = new Date();
-        jsonPivot.put("source", source);
-        jsonPivot.put("date", dateFormat.format(date));
-
-        mongo.insert(DEMANDE_COLLECTION, jsonPivot, retourJson -> {
-            if (!"ok".equals(retourJson.body().getString("status"))) {
-                log.error("Supportpivot : could not save json to mongoDB");
-            }
-        });
     }
 
     /**
@@ -445,7 +431,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         savedInfo.put("pj", savedInfoPJ);
 
         //store in mongo sent mail
-        saveTicketToMongo("mail", savedInfo);
+        mongoService.saveTicket("mail", savedInfo);
 
         if(emailSender==null){
             handler.handle(new Either.Left<>("999;EmailSender module not found"));
@@ -465,20 +451,6 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     }
 
     /**
-     * Send an issue to IWS with fictive info, for testing purpose
-     * @param mailTo mail to send to
-     */
-    @Override
-    public void getMongoInfos(HttpServerRequest request, String mailTo, final Handler<Either<String, JsonObject>> handler) {
-        try {
-            JsonObject req = new JsonObject(java.net.URLDecoder.decode(mailTo, "UTF-8"));
-            mongo.find(DEMANDE_COLLECTION, req, jsonObjectMessage -> handler.handle(new Either.Right<String, JsonObject>(jsonObjectMessage.body())));
-        } catch(Exception e) {
-            handler.handle(new Either.Left<>("Malformed json"));
-        }
-    }
-
-    /**
      * Send updated informations from a Jira ticket to IWS
      * @param idJira idJira updated in Jira to send to IWS
      */
@@ -492,7 +464,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         jiraService.getFromJira(request, idJira, stringJsonObjectEither -> {
             if (stringJsonObjectEither.isRight()) {
                 JsonObject jsonPivot = stringJsonObjectEither.right().getValue();
-                saveTicketToMongo(ATTRIBUTION_CGI, jsonPivot);
+                mongoService.saveTicket(ATTRIBUTION_CGI, jsonPivot);
                 add(request,jsonPivot , ATTRIBUTION_CGI, handler);
             } else {
                 handler.handle(new Either.Left<>(

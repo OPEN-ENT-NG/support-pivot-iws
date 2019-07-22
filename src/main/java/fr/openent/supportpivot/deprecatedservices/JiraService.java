@@ -16,7 +16,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package fr.openent.supportpivot.service;
+package fr.openent.supportpivot.deprecatedservices;
 
 import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;
@@ -24,37 +24,22 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 
 /**
- * Created by colenot on 07/12/2017.
- *
- * Service to handle pivot information and send at the right place
+ * Created by mercierq on 09/02/2018.
+ * Service to handle pivot information and send it to Jira
  */
-public interface DemandeService {
-
+public interface JiraService {
     /**
-     * Add issue from IWS
-     * Check every mandatory field is present in jsonPivot, then send for treatment
-     * @param jsonPivot JSON object in PIVOT format
-     */
-    void treatTicketFromIWS(HttpServerRequest request, JsonObject jsonPivot, Handler<Either<String, JsonObject>> handler);
-
-    /**
-     * Add issue from ENT
+     * Add issue from IWS to JIRA
      * - Check every mandatory field is present in jsonPivot, then send for treatment
      * - Replace empty values by default ones
      * - Replace modules names
      * @param jsonPivot JSON object in PIVOT format
      */
-    void treatTicketFromENT(JsonObject jsonPivot, Handler<Either<String, JsonObject>> handler);
+    void sendToJIRA(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler);
 
     /**
-     * Send an issue to IWS with fictive info, for testing purpose
-     * @param mailTo mail to send to
+     * Update issue from JIRA to IWS
+     * @param idJira String
      */
-    void getMongoInfos(HttpServerRequest request, String mailTo, Handler<Either<String, JsonObject>> handler);
-
-    /**
-     * Send updated informations from a Jira ticket to IWS
-     * @param idJira idJira updated in Jira to sens to IWS
-     */
-    void sendJiraTicketToIWS(HttpServerRequest request, String idJira, Handler<Either<String, JsonObject>> handler);
+    void getFromJira(HttpServerRequest request, String idJira, final Handler<Either<String, JsonObject>> handler);
 }

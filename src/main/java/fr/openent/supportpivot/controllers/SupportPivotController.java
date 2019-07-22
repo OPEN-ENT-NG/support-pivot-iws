@@ -16,25 +16,25 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package fr.openent.supportpivot;
+package fr.openent.supportpivot.controllers;
 
-import fr.openent.supportpivot.service.DemandeService;
-import fr.openent.supportpivot.service.impl.DefaultDemandeServiceImpl;
+import fr.openent.supportpivot.deprecatedservices.DemandeService;
+import fr.openent.supportpivot.managers.ServiceManager;
+import fr.openent.supportpivot.services.MongoService;
 import fr.wseduc.bus.BusAddress;
 import fr.wseduc.rs.Get;
 import fr.wseduc.rs.Post;
 import fr.wseduc.security.SecuredAction;
 import fr.wseduc.webutils.Either;
-import fr.wseduc.webutils.email.EmailSender;
 import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.request.RequestUtils;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import org.entcore.common.controller.ControllerHelper;
-import org.entcore.common.email.EmailFactory;
 import org.vertx.java.core.http.RouteMatcher;
 
 import java.util.Map;
@@ -50,17 +50,20 @@ import java.util.Map;
  * /testMail/:mail : Send a test mail to address in parameter
  * /demandeENT : Register a demande from Support module
  */
-public class SupportController extends ControllerHelper{
+public class SupportPivotController extends ControllerHelper{
 
     private DemandeService demandeService;
+    private MongoService mongoService;
 
     @Override
     public void init(Vertx vertx, final JsonObject config, RouteMatcher rm,
                      Map<String, fr.wseduc.webutils.security.SecuredAction> securedActions) {
         super.init(vertx, config, rm, securedActions);
-        EmailFactory emailFactory = new EmailFactory(vertx, config);
-        EmailSender emailSender = emailFactory.getSender();
-        this.demandeService = new DefaultDemandeServiceImpl(vertx, config, emailSender);
+
+        ServiceManager serviceManager = ServiceManager.init(vertx, config, eb);
+
+        this.demandeService = serviceManager.getDemandeService();
+        this.mongoService = serviceManager.getMongoService();
     }
 
     /**
@@ -99,6 +102,30 @@ public class SupportController extends ControllerHelper{
     }
 
     /**
+     * Get a default handler for HttpServerRequest with added info
+     * @return handler with error code, error message and status
+     */
+    private Handler<AsyncResult<JsonObject>> getDefaultResponseHandlerAsync(final HttpServerRequest request){
+        return  result -> {
+            if (result.succeeded()) {
+                Renders.renderJson(request, result.result(), 200);
+            } else {
+                String errorCode = result.cause().getMessage();
+                String errorCodeMsg="";
+                if(errorCode.contains(";")){
+                    errorCodeMsg=errorCode.substring(errorCode.indexOf(";")+1);
+                    errorCode=errorCode.split(";")[0];
+                }
+                JsonObject error = new JsonObject()
+                        .put("errorCode", errorCode)
+                        .put("errorMessage", errorCodeMsg)
+                        .put("status", "KO");
+                Renders.renderJson(request, error, 400);
+            }
+        };
+    }
+
+    /**
      * Internel webservice. Receive info from support module
      */
     @BusAddress("supportpivot.demande")
@@ -125,7 +152,7 @@ public class SupportController extends ControllerHelper{
     @SecuredAction("supportpivot.ws.dbrequest")
     public void getMongoInfos(final HttpServerRequest request) {
         final String mailTo = request.params().get("request");
-        demandeService.getMongoInfos(request, mailTo, getDefaultResponseHandler(request));
+        mongoService.getMongoInfos(mailTo, getDefaultResponseHandlerAsync(request));
     }
 
     /**
