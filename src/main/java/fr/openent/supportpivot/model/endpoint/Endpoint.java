@@ -8,6 +8,11 @@ import io.vertx.core.json.JsonObject;
 
 public interface Endpoint {
 
+    static final String ENDPOINT_JIRA = "jira";
+    static final String ENDPOINT_ENT = "ent";
+    static final String ENDPOINT_IWS = "iws";
+    static final String ENDPOINT_GLPI = "glpi";
+
     /**
      * Triggers ticket recuperation for this endpoint.
      * Might not do anything if the endpoint does not use trigger mecanism.
