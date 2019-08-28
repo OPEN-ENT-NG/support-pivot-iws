@@ -1,5 +1,5 @@
     {
-      "name": "fr.openent~supportpivot~1.0-SNAPSHOT",
+      "name": "fr.openent~supportpivot~1.1-SNAPSHOT",
       "config": {
         "main" : "fr.openent.supportpivot.Supportpivot",
         "port" : 9595,
@@ -24,6 +24,7 @@
         "jira-passwd" : "${supportPivotJIRAPwd}",
         "jira-host" : "${supportPivotJIRAHost}",
         "jira-url" : "/rest/api/2/issue/",
+        "jira-base-uri" : "/rest/api/2/",
         "jira-project-key" :  "${supportPivotJIRAProjectKey}",
         "jira-allowed-tickettype" :  ${supportPivotJIRAAllowedTicketType},
         "jira-allowed-priority":  ${supportPivotJIRAAllowedPriority},
@@ -36,11 +37,25 @@
             "resolution_ent" : "${supportPivotCFResEnt}",
             "resolution_iws" : "${supportPivotCFResIws}",
             "creator" : "${supportPivotCFCreator}",
-            "response_technical" : "${supportPivotCFTechResp}"
+            "response_technical" : "${supportPivotCFTechResp}",
+             "id_glpi" : "${supportPivotCFIdGlpi}"
         },
     	"jira-status-mapping": {
     		"statutsJira": ${supportPivotMappingStatus},
     		"statutsDefault" : "${supportPivotDefaultStatus}"
+    	},
+    	"glpi": {
+    	    "host": "${supportPivotGlpiHost}",
+    	    "root-uri": "${supportPivotGlpiRootUri}",
+    	    "login": "${supportPivotGlpiLogin}",
+    	    "password": "${supportPivotGlpiPassword}",
+    	    "mapping": {
+    	        "category": ${supportPivotGlpiCategoryMapping},
+    	        "default_category": "${supportPivotGlpiDefaultCategory}",
+    	        "type": ${supportPivotGlpiTypeMapping},
+    	        "default_type": "${supportPivotGlpiDefaultType}",
+    	        "location": ${supportPivotGlpiLocationMapping}
+    	    }
     	}
       }
     }

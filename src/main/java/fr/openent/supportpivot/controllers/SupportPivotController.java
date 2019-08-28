@@ -20,7 +20,9 @@ package fr.openent.supportpivot.controllers;
 
 import fr.openent.supportpivot.deprecatedservices.DemandeService;
 import fr.openent.supportpivot.managers.ServiceManager;
+import fr.openent.supportpivot.model.endpoint.Endpoint;
 import fr.openent.supportpivot.services.MongoService;
+import fr.openent.supportpivot.services.RouterService;
 import fr.wseduc.bus.BusAddress;
 import fr.wseduc.rs.Get;
 import fr.wseduc.rs.Post;
@@ -39,7 +41,6 @@ import org.vertx.java.core.http.RouteMatcher;
 
 import java.util.Map;
 
-
 /**
  * Created by colenot on 07/12/2017.
  *
@@ -54,6 +55,7 @@ public class SupportPivotController extends ControllerHelper{
 
     private DemandeService demandeService;
     private MongoService mongoService;
+    private RouterService routerService;
 
     @Override
     public void init(Vertx vertx, final JsonObject config, RouteMatcher rm,
@@ -64,6 +66,7 @@ public class SupportPivotController extends ControllerHelper{
 
         this.demandeService = serviceManager.getDemandeService();
         this.mongoService = serviceManager.getMongoService();
+        this.routerService = serviceManager.getRouteurService();
     }
 
     /**
@@ -129,20 +132,19 @@ public class SupportPivotController extends ControllerHelper{
      * Internel webservice. Receive info from support module
      */
     @BusAddress("supportpivot.demande")
+    @SecuredAction("supportpivot.demande")
     public void busEndpoint(final Message<JsonObject> message) {
-        final JsonObject issue = message.body().getJsonObject("issue");
-        demandeService.treatTicketFromENT( issue, event -> {
-            if(event.isRight()) {
+        JsonObject jsonMessage = message.body();
+        this.routerService.processTicket(Endpoint.ENDPOINT_ENT, jsonMessage, event -> {
+            if (event.succeeded()) {
                 message.reply(new JsonObject().put("status", "ok")
                         .put("message", "invalid.action")
-                        .put("issue", issue));
+                        .put("issue", event.result()));
             } else {
-                log.error("Supportpivot : error when trying send ticket from ENT" + event.left().getValue());
                 message.reply(new JsonObject().put("status", "ko")
-                    .put("message", event.left().getValue()));
+                        .put("message", event.cause().getMessage()));
             }
         });
-
     }
 
     /**

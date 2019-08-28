@@ -75,7 +75,7 @@ public class DefaultJiraServiceImpl implements JiraService {
     private static final int HTTP_STATUS_404_NOT_FOUND= 404;
     private static final int HTTP_STATUS_201_CREATED = 201;
 
-    DefaultJiraServiceImpl(Vertx vertx, JsonObject config) {
+    public DefaultJiraServiceImpl(Vertx vertx, JsonObject config) {
 
         this.vertx = vertx;
         String jiraLogin = config.getString("jira-login");
@@ -139,7 +139,7 @@ public class DefaultJiraServiceImpl implements JiraService {
         httpClientRequest.end();
     }
     /**
-     * Send pivot information from IWS -- to Jira
+     * Send pivot information from IWS -- to Jira<
      * A ticket is created with the Jira API with all the json information received
      * @param jsonPivotIn JSON in pivot format
      * @param handler return JsonPivot from Jira or error message
@@ -194,12 +194,12 @@ public class DefaultJiraServiceImpl implements JiraService {
                 .put("issuetype", new JsonObject()
                         .put("name", ticketType))
                 .put("labels", jsonPivotIn.getJsonArray(MODULES_FIELD))
-                .put(JIRA_FIELD.getString("id_ent"), jsonPivotIn.getString(IDENT_FIELD))
+                .put(JIRA_FIELD.getString("id_ent"), jsonPivotIn.getString(ID_FIELD))
                 .put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDIWS_FIELD))
                 .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD))
                 .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD))
                 .put(JIRA_FIELD.getString("creation"), jsonPivotIn.getString(DATE_CREA_FIELD))
-                .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESOENT_FIELD))
+                .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESO_FIELD))
                 .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
                 .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(CREATOR_FIELD))
                 .put("priority", new JsonObject()
@@ -273,7 +273,6 @@ public class DefaultJiraServiceImpl implements JiraService {
 
     }
 
-
     /**
      * Send Jira Comments
      * @param idJira arrayComments
@@ -317,8 +316,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         }
     }
 
-
-
     /**
      * Send PJ from IWS to JIRA
      * @param jsonPivotCompleted jsonJiraPJ jsonPivot handler
@@ -348,7 +345,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         }
 
     }
-
 
     /**
      * Send Jira PJ
@@ -449,7 +445,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                                 jsonJiraUpdateTicket.put("fields", new JsonObject()
                                         .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD))
                                         .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD))
-                                        .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESOENT_FIELD))
+                                        .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESO_FIELD))
                                         .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
                                         .put(("description"), jsonPivotIn.getString(DESCRIPTION_FIELD))
                                         .put("summary", jsonPivotIn.getString(TITLE_FIELD))
@@ -515,7 +511,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         );
         terminateRequest(getTicketInfosRequest);
     }
-
 
     /**
      * Transform a comment from pivot format, to json
@@ -619,7 +614,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         return commentsToAdd;
     }
 
-
     /**
      * Compare PJ.
      * Add every comment to ticket not already existing
@@ -704,7 +698,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         terminateRequest(httpClientRequestGetInfo);
     }
 
-
     /**
      * Modified Jira JSON to prepare to send the email to IWS
      */
@@ -766,10 +759,10 @@ public class DefaultJiraServiceImpl implements JiraService {
             jsonPivot.put(MODULES_FIELD, fields.getJsonArray("labels"));
 
             if (fields.getString(JIRA_FIELD.getString("id_ent")) != null) {
-                jsonPivot.put(IDENT_FIELD,
+                jsonPivot.put(ID_FIELD,
                         fields.getString(JIRA_FIELD.getString("id_ent")));
             } else {
-                jsonPivot.put(IDENT_FIELD, "");
+                jsonPivot.put(ID_FIELD, "");
             }
 
             if (fields.getString(JIRA_FIELD.getString("id_iws")) != null) {
@@ -823,7 +816,7 @@ public class DefaultJiraServiceImpl implements JiraService {
             }
 
             if (fields.getString(JIRA_FIELD.getString("resolution_ent")) != null) {
-                jsonPivot.put(DATE_RESOENT_FIELD,
+                jsonPivot.put(DATE_RESO_FIELD,
                         fields.getString(JIRA_FIELD.getString("resolution_ent")));
             }
 
@@ -881,8 +874,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         }
     }
 
-
-
     /**
      * Get Jira PJ via Jira API
      */
@@ -910,7 +901,6 @@ public class DefaultJiraServiceImpl implements JiraService {
         terminateRequest(getAttachmentrequest);
 
     }
-
 
     /**
      * Serialize comments : date | author | content
@@ -951,7 +941,5 @@ public class DefaultJiraServiceImpl implements JiraService {
     private String stringEncode(String in) {
         return new String(in.getBytes(), StandardCharsets.UTF_8);
     }
-
-
 
 }

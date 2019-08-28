@@ -18,6 +18,7 @@
 
 package fr.openent.supportpivot;
 
+import fr.openent.supportpivot.controllers.GlpiController;
 import fr.openent.supportpivot.controllers.SupportPivotController;
 import fr.openent.supportpivot.managers.ConfigManager;
 import org.entcore.common.http.BaseServer;
@@ -32,6 +33,7 @@ public class Supportpivot extends BaseServer {
 
 		appConfig = new ConfigManager(config);
 		addController(new SupportPivotController());
+		addController(new GlpiController());
 	}
 
 }

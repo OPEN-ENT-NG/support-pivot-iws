@@ -3,7 +3,10 @@ package fr.openent.supportpivot.managers;
 import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
 import fr.openent.supportpivot.deprecatedservices.DemandeService;
-import fr.openent.supportpivot.services.MongoService;
+import fr.openent.supportpivot.helpers.LoginTool;
+import fr.openent.supportpivot.helpers.ParserTool;
+import fr.openent.supportpivot.services.*;
+import fr.openent.supportpivot.services.routers.CrnaRouterService;
 import fr.wseduc.webutils.email.EmailSender;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
@@ -17,6 +20,10 @@ public class ServiceManager {
     // Deprecated Services
     private DemandeService demandeService;
     private MongoService mongoService;
+    private RouterService routeurService;
+    private HttpClientService httpClientService;
+    private LoginTool loginService;
+    private ParserTool parserService;
 
     public static ServiceManager init(Vertx vertx, JsonObject config, EventBus eb) {
         if(serviceManager == null) {
@@ -35,9 +42,14 @@ public class ServiceManager {
 
         this.mongoService = new MongoService(appConfig.getMongoCollection());
         this.demandeService = new DefaultDemandeServiceImpl(vertx, config, emailSender, mongoService);
-
+        this.httpClientService = new HttpClientService(vertx);
+        this.routeurService = new CrnaRouterService(httpClientService, demandeService, appConfig);
     }
 
     public DemandeService getDemandeService() { return demandeService; }
     public MongoService getMongoService() { return mongoService; }
+    public RouterService getRouteurService() { return routeurService; }
+    public HttpClientService getHttpClientService() { return httpClientService; }
+    /*public LoginTool getLoginService() { return loginService; }
+    public ParserService getParserService() { return parserService; }*/
 }

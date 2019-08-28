@@ -149,17 +149,17 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                     && !jsonPivot.getString(STATUSENT_FIELD).isEmpty()) {
                 String newStatus;
                 switch (jsonPivot.getString(STATUSENT_FIELD)) {
-                    case STATUSENT_NEW:
-                        newStatus = STATUSPIVOT_NEW;
+                    case STATUS_NEW:
+                        newStatus = STATUS_NEW;
                         break;
-                    case STATUSENT_OPENED:
-                        newStatus = STATUSPIVOT_OPENED;
+                    case STATUS_OPENED:
+                        newStatus = STATUS_OPENED;
                         break;
-                    case STATUSENT_RESOLVED:
-                        newStatus = STATUSPIVOT_RESOLVED;
+                    case STATUS_RESOLVED:
+                        newStatus = STATUS_RESOLVED;
                         break;
-                    case STATUSENT_CLOSED:
-                        newStatus = STATUSPIVOT_CLOSED;
+                    case STATUS_CLOSED:
+                        newStatus = STATUS_CLOSED;
                         break;
                     default:
                         newStatus = jsonPivot.getString(STATUSENT_FIELD);
@@ -228,8 +228,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         switch(source) {
             case ATTRIBUTION_IWS:
                 boolean sentToEnt = false;
-                if(jsonPivot.containsKey(IDENT_FIELD)
-                        && !jsonPivot.getString(IDENT_FIELD).isEmpty()) {
+                if(jsonPivot.containsKey(ID_FIELD)
+                        && !jsonPivot.getString(ID_FIELD).isEmpty()) {
                     sendToENT(jsonPivot, handler);
                     sentToEnt = true;
                 }
@@ -265,8 +265,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
             case ATTRIBUTION_CGI:
                 sendToIWS(request, jsonPivot, handler);
-                if(jsonPivot.containsKey(IDENT_FIELD)
-                        && jsonPivot.getString(IDENT_FIELD).isEmpty()) {
+                if(jsonPivot.containsKey(ID_FIELD)
+                        && jsonPivot.getString(ID_FIELD).isEmpty()) {
                     sendToENT(jsonPivot, entResponse -> {
                         if(entResponse.isLeft()) {
                             log.error("Supportpivot : could not send JIRA ticket to ENT" + entResponse.left().getValue());
@@ -282,11 +282,11 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * Send pivot information to ENT -- using internal bus
      * @param jsonPivot JSON in pivot format
      */
-    private void sendToENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
+    public void sendToENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        if(!jsonPivot.containsKey(IDENT_FIELD)
-                || jsonPivot.getString(IDENT_FIELD).isEmpty()) {
-            handler.handle(new Either.Left<>("2;Mandatory field " + IDENT_FIELD));
+        if(!jsonPivot.containsKey(ID_FIELD)
+                || jsonPivot.getString(ID_FIELD).isEmpty()) {
+            handler.handle(new Either.Left<>("2;Mandatory field " + ID_FIELD));
             return;
         }
         eb.send(ENT_TRACKERUPDATE_ADDRESS,
@@ -367,7 +367,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         mail.append("<br/>id_jira=")
             .append(jsonPivot.getString(IDJIRA_FIELD, ""))
             .append("<br/>id_ent=")
-            .append(jsonPivot.getString(IDENT_FIELD, ""))
+            .append(jsonPivot.getString(ID_FIELD, ""))
             .append("<br/>id_iws=")
             .append(jsonPivot.getString(IDIWS_FIELD, ""));
 
@@ -388,7 +388,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             .append("<br/>date_resolution_iws=")
             .append(jsonPivot.getString(DATE_RESOIWS_FIELD, ""))
             .append("<br/>date_resolution_ent=")
-            .append(jsonPivot.getString(DATE_RESOENT_FIELD, ""))
+            .append(jsonPivot.getString(DATE_RESO_FIELD, ""))
             .append("<br/>date_resolution_jira=")
             .append(jsonPivot.getString(DATE_RESOJIRA_FIELD, ""))
             .append("<br/>reponse_technique=")
@@ -409,7 +409,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         JsonObject savedInfo = new JsonObject();
         savedInfo.put("mailContent", mail.toString());
         savedInfo.put(IDIWS_FIELD, jsonPivot.getString(IDIWS_FIELD, ""));
-        savedInfo.put(IDENT_FIELD, jsonPivot.getString(IDENT_FIELD, ""));
+        savedInfo.put(ID_FIELD, jsonPivot.getString(ID_FIELD, ""));
         savedInfo.put(IDJIRA_FIELD, jsonPivot.getString(IDJIRA_FIELD, ""));
         savedInfo.put("dest", mailTo);
 
