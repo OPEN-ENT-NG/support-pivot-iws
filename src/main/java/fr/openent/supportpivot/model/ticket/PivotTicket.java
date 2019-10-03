@@ -11,16 +11,6 @@ import java.util.LinkedList;
 
 public class PivotTicket implements Ticket{
 
-    private String title;
-    private String academieGlpi;
-    private String content;
-    private Integer priority;
-    private String type;
-    private Date date;
-    private String attributed;
-    private String users;
-    private String status;
-
     private LinkedList<String> followUps = new LinkedList<String>();
     private LinkedList<String> documents = new LinkedList<String>();
 
@@ -29,23 +19,37 @@ public class PivotTicket implements Ticket{
 
     public PivotTicket () {
         this.setAttributed();
+        this.initComments();
+        this.initPjs();
     }
 
-    public Integer getGlpiId(){
-        try {
-            return Integer.parseInt(jsonTicket.getString(PivotConstants.IDGLPI_FIELD));
-        } catch(Exception e) {
-            return null;
+    private void initComments() {
+        if (this.getComments() == null) {
+            this.jsonTicket.put(PivotConstants.COMM_FIELD, new JsonArray());
         }
     }
-    public Integer getJiraId(){
-        return Integer.parseInt(jsonTicket.getString(PivotConstants.IDJIRA_FIELD));
+
+    private void initPjs() {
+        if (this.getPjs() == null) {
+            this.jsonTicket.put(PivotConstants.ATTACHMENT_FIELD, new JsonArray());
+        }
     }
-    public Integer getId(){
-        return Integer.parseInt(jsonTicket.getString(PivotConstants.ID_FIELD));
+
+    public String getGlpiId(){
+        return jsonTicket.getString(PivotConstants.IDGLPI_FIELD, null);
+    }
+    public String getJiraId(){
+        return jsonTicket.getString(PivotConstants.IDJIRA_FIELD, null);
+    }
+
+    public String getId(){
+        return jsonTicket.getString(PivotConstants.ID_FIELD, null);
     }
 
     public JsonObject getJsonTicket() {
+        if(this.jsonTicket == null) {
+            this.jsonTicket = new JsonObject();
+        }
         return this.jsonTicket;
     }
 
@@ -86,7 +90,7 @@ public class PivotTicket implements Ticket{
     public JsonArray getComments() { return jsonTicket.getJsonArray(PivotConstants.COMM_FIELD); }
 
     @Override
-    public JsonArray getPj() { return jsonTicket.getJsonArray(PivotConstants.ATTACHMENT_FIELD); }
+    public JsonArray getPjs() { return jsonTicket.getJsonArray(PivotConstants.ATTACHMENT_FIELD); }
     /*#### DATES ####*/
 
     public String getCreatedAt(){
@@ -191,6 +195,14 @@ public class PivotTicket implements Ticket{
     }
 
     public void setJsonObject(JsonObject ticket) {
-        this.jsonTicket = ticket;
+        if(ticket != null) {
+            this.jsonTicket = ticket;
+            this.initComments();
+            this.initPjs();
+        }
     }
+
+    public void setId(String id) { jsonTicket.put(PivotConstants.ID_FIELD, id.trim()); }
+
+    public void setIwsId(String id) { jsonTicket.put(PivotConstants.IDIWS_FIELD, id.trim()); }
 }

@@ -90,7 +90,7 @@ public class JiraTicket implements Ticket {
     }
 
     @Override
-    public JsonArray getPj() {
+    public JsonArray getPjs() {
         return null;
     }
 

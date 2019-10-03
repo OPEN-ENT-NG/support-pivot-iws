@@ -38,6 +38,9 @@ public class GlpiConstants {
     public final static String DATE_RESO_FIELD = "solvedate";
     public final static String DATE_UPDATE_FIELD = "date_mod";
 
+    public final static String ATTACHMENT_NAME_FORM = "name";
+    public final static String ATTACHMENT_B64_FORM = "base64";
+
 
 //    public final static String GLPI_GET_TYPE_NAME = "type_name";
 
@@ -158,7 +161,7 @@ public class GlpiConstants {
     public final static String TYPE_ID = "2";
 
     public final static String CONTENT_COMMENT = "content";
-    public final static String TICKET_ID_COMMENT = "ticket";
+    public final static String TICKET_ID_FORM = "ticket";
 
     public final static String END_XML_FORMAT = "</struct></value></param></params></methodCall>";
 

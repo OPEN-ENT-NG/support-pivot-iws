@@ -7,12 +7,11 @@ import fr.openent.supportpivot.model.endpoint.EndpointFactory;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
 import fr.openent.supportpivot.model.ticket.Ticket;
 import fr.openent.supportpivot.services.HttpClientService;
-import fr.openent.supportpivot.services.MongoService;
 import fr.openent.supportpivot.services.RouterService;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
-import io.vertx.core.json.Json;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -27,8 +26,8 @@ public class CrnaRouterService implements RouterService {
     protected static final Logger log = LoggerFactory.getLogger(CrnaRouterService.class);
 
 
-    public CrnaRouterService(HttpClientService httpClientService, DemandeService demandeService, ConfigManager config) {
-        EndpointFactory endpointFactory = new EndpointFactory(config, httpClientService, demandeService);
+    public CrnaRouterService(HttpClientService httpClientService, DemandeService demandeService, ConfigManager config, Vertx vertx) {
+        EndpointFactory endpointFactory = new EndpointFactory(config, httpClientService, demandeService, vertx);
         glpiEndpoint = endpointFactory.getGlpiEndpoint();
         // jiraEndpoint = endpointFactory.getJiraEndpoint();
         pivotEndpoint = endpointFactory.getPivotEndpoint();
@@ -42,6 +41,9 @@ public class CrnaRouterService implements RouterService {
                 glpiEndpoint.send(ticket, result -> {
                     if (result.succeeded()) {
                         handler.handle(Future.succeededFuture(result.result()));
+
+                        pivotEndpoint.send(ticket, resultEnt -> {
+                        });
 
                         /*jiraEndpoint.send(ticket, jiraResult -> { TODO, when Glpi process end, send to jira.
                             if (jiraResult.succeeded()) {

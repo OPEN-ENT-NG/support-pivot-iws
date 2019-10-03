@@ -6,6 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 public class PivotConstants {
+
+    public final static String BUS_SEND = "support.update.bugtracker";
+    public final static String ENT_BUS_OK_STATUS = "OK";
+
     /**
      * JSON fields for Pivot format
      */

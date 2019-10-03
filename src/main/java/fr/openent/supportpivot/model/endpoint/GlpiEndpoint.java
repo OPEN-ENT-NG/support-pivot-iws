@@ -21,7 +21,6 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.xpath.*;
 import java.net.URISyntaxException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -154,32 +153,34 @@ class GlpiEndpoint implements Endpoint {
 
                         String id = handlerId.result().trim();
 
-                        // Une fois l'id récupérer, on peut notifier à l'ENT que la communication du ticket a fonctionné
+                        // Une fois l'id récupérer, on peut notifie r à l'ENT que la communication du ticket a fonctionné
                         ticket.setGlpiId(id);
+                        ticket.setIwsId(ticket.getId());
                         handler.handle(Future.succeededFuture(ticket));
 
                         // traitement des commentaires
                         String xmlCommentTicket = this.generateXmlFirstComment(id, ticket);
 
-                        this.sendCommentTicketGlpi(xmlCommentTicket, handlerFirstComment -> {
+                        this.sendTicketGlpi(xmlCommentTicket, handlerFirstComment -> {
                             if (handlerFirstComment.succeeded()) {
+
                                 ticket.getComments().forEach(comment -> {
-                                    this.sendCommentTicketGlpi(this.xmlComments(id, (String) comment), handlerComment -> {
+                                    this.sendTicketGlpi(this.xmlComments(id, (String) comment), handlerComment -> {
                                         if (handlerComment.failed()) {
                                             handler.handle(Future.failedFuture(handlerComment.cause().getMessage()));
                                         }
                                     });
                                 });
 
-                                // TODO PJ (when Ent dev is fixed)
-                                        /*ticket.getPj().forEach(pj -> {
-                                            log.info("Un pj: " + pj.toString());
-                                            *//*this.sendPjTicketGlpi(this.xmlComments(id, (String) comment), handlerComment -> {
-                                                if (handlerComment.failed()) {
-                                                    handler.handle(Future.failedFuture(handlerComment.cause()));
-                                                }
-                                            });*//*
-                                        });*/
+                                ticket.getPjs().forEach(pj -> {
+                                    log.info("pweeeet");
+                                    this.sendTicketGlpi(this.xmlPj(id, (JsonObject) pj), handlerPj -> {
+                                        log.info("pj send");
+                                        if (handlerPj.failed()) {
+                                            handler.handle(Future.failedFuture(handlerPj.cause().getMessage()));
+                                        }
+                                    });
+                                });
 
                             } else {
                                 handler.handle(Future.failedFuture(handlerFirstComment.cause().getMessage()));
@@ -198,9 +199,9 @@ class GlpiEndpoint implements Endpoint {
         log.info("TODO: add update process");
     }
 
-    private void sendCommentTicketGlpi(String xmlComment, Handler<AsyncResult<JsonObject>> handler) {
+    private void sendTicketGlpi(String xml, Handler<AsyncResult<JsonObject>> handler) {
         PivotHttpClientRequest sendingRequest = this.httpClient.createPostRequest(
-                this.config.getGlpiRootUri(), xmlComment
+                this.config.getGlpiRootUri(), xml
         );
         this.setHeaderRequest(sendingRequest);
 
@@ -220,9 +221,21 @@ class GlpiEndpoint implements Endpoint {
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>glpi.addTicketFollowup</methodName><params><param><value><struct>" +
                 "<member><name>session</name><value><string>" + this.token + "</string></value></member>";
 
-        xml += this.xmlAddField(xml, GlpiConstants.TICKET_ID_COMMENT, "string", id);
+        xml += this.xmlAddField(xml, GlpiConstants.TICKET_ID_FORM, "string", id);
 
         xml += this.xmlAddField(xml, GlpiConstants.CONTENT_COMMENT, "string", comment);
+
+        xml += GlpiConstants.END_XML_FORMAT;
+        return xml;
+    }
+
+    private String xmlPj(String id, JsonObject pj) {
+        String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>glpi.addTicketDocument</methodName><params><param><value><struct>" +
+                "<member><name>session</name><value><string>" + this.token + "</string></value></member>";
+
+        xml += this.xmlAddField(xml, GlpiConstants.TICKET_ID_FORM, "string", id);
+        xml += this.xmlAddField(xml, GlpiConstants.ATTACHMENT_NAME_FORM, "string", pj.getString("nom"));
+        xml += this.xmlAddField(xml, GlpiConstants.ATTACHMENT_B64_FORM, "string", pj.getString("contenu"));
 
         xml += GlpiConstants.END_XML_FORMAT;
         return xml;
@@ -232,7 +245,7 @@ class GlpiEndpoint implements Endpoint {
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>glpi.addTicketFollowup</methodName><params><param><value><struct>" +
                 "<member><name>session</name><value><string>" + this.token + "</string></value></member>";
 
-        xml += this.xmlAddField(xml, GlpiConstants.TICKET_ID_COMMENT, "string", Id);
+        xml += this.xmlAddField(xml, GlpiConstants.TICKET_ID_FORM, "string", Id);
 
         String content = "id_ent: " + ticket.getId().toString() + "| status_ent: " + ticket.getStatus() + " | date de creation: " + ticket.getCreatedAt() + "\n" + "demandeur: " + ticket.getUsers();
         xml += this.xmlAddField(xml, GlpiConstants.CONTENT_COMMENT, "string", content);
@@ -347,7 +360,7 @@ class GlpiEndpoint implements Endpoint {
         try {
             switch (name) {
                 case GlpiConstants.ID_FIELD:
-                    pivotTicket.setGlpiId(pivotValue);
+                    pivotTicket.setId(pivotValue);
                     break;
                 case GlpiConstants.TITLE_FIELD:
                     pivotTicket.setTitle(pivotValue);

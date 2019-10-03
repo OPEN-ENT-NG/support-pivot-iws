@@ -43,7 +43,7 @@ public class ServiceManager {
         this.mongoService = new MongoService(appConfig.getMongoCollection());
         this.demandeService = new DefaultDemandeServiceImpl(vertx, config, emailSender, mongoService);
         this.httpClientService = new HttpClientService(vertx);
-        this.routeurService = new CrnaRouterService(httpClientService, demandeService, appConfig);
+        this.routeurService = new CrnaRouterService(httpClientService, demandeService, appConfig, vertx);
     }
 
     public DemandeService getDemandeService() { return demandeService; }

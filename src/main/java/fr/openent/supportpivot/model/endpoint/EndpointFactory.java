@@ -3,17 +3,18 @@ package fr.openent.supportpivot.model.endpoint;
 import fr.openent.supportpivot.deprecatedservices.DemandeService;
 import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.services.HttpClientService;
+import io.vertx.core.Vertx;
 
 public class EndpointFactory {
 
     private HttpClientService httpClientService;
-    private DemandeService demandeService;
     private ConfigManager config;
+    private Vertx vertx;
 
-    public EndpointFactory(ConfigManager config, HttpClientService httpClientService, DemandeService demandeService) {
+    public EndpointFactory(ConfigManager config, HttpClientService httpClientService, DemandeService demandeService, Vertx vertx) {
         this.config = config;
         this.httpClientService = httpClientService;
-        this.demandeService = demandeService;
+        this.vertx = vertx;
 
     }
 
@@ -26,6 +27,6 @@ public class EndpointFactory {
     }*/
 
     public Endpoint getPivotEndpoint()  {
-        return new PivotEndpoint(this.httpClientService, this.demandeService);
+        return new PivotEndpoint(this.vertx);
     }
 }

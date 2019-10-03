@@ -1,7 +1,6 @@
 package fr.openent.supportpivot.managers;
 
 import fr.openent.supportpivot.Supportpivot;
-import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -34,16 +33,16 @@ public class ConfigManager {
         // Keep default value for backward compatibility
         this.mongoCollection = config.getString("mongo-collection", "support.demandes");
 
-        JsonObject confiGlpi = config.getJsonObject("glpi");
-        this.glpiHost = confiGlpi.getString("host");
-        this.glpiRootUri = confiGlpi.getString("root-uri");
+        JsonObject configGlpi = config.getJsonObject("glpi");
+        this.glpiHost = configGlpi.getString("host");
+        this.glpiRootUri = configGlpi.getString("root-uri");
 
-        this.glpiLogin = confiGlpi.getString("login");
-        this.glpiPassword = confiGlpi.getString("password");
+        this.glpiLogin = configGlpi.getString("login");
+        this.glpiPassword = configGlpi.getString("password");
 
-        //this.glpiCategory = this.toHashMapCategories(confiGlpi.getString("mapping.category"));
+        //this.glpiCategory = this.toHashMapCategories(configGlpi.getString("mapping.category"));
 
-        JsonObject glpiMappingConf = confiGlpi.getJsonObject("mapping");
+        JsonObject glpiMappingConf = configGlpi.getJsonObject("mapping");
         this.glpiCategory = glpiMappingConf.getString("default_category");
         this.glpiType = glpiMappingConf.getString("default_type");
         this.glpiLocation = glpiMappingConf.getJsonObject("location");

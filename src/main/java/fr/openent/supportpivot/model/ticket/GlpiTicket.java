@@ -65,7 +65,7 @@ public class GlpiTicket implements Ticket{
     public JsonArray getComments() { return null; }
 
     @Override
-    public JsonArray getPj() { return null; }
+    public JsonArray getPjs() { return null; }
 
     @Override
     public String getCreatedAt() { //TODO

@@ -17,7 +17,7 @@ public interface Ticket {
     Integer getPriority();
     String getType();
     JsonArray getComments();
-    JsonArray getPj();
+    JsonArray getPjs();
 
     String getCreatedAt();
 

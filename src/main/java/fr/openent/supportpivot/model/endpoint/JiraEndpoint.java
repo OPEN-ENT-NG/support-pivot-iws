@@ -130,7 +130,7 @@ class JiraEndpoint extends BaseServer implements Endpoint {
         handler.handle(Future.succeededFuture(jiraTicket));
     }
 
-    private void getJiraTicket(Integer idGlpi, Handler<AsyncResult<JsonObject>> handler) {
+    private void getJiraTicket(String idGlpi, Handler<AsyncResult<JsonObject>> handler) {
         try {
             PivotHttpClientRequest sendingRequest = this.httpClient
                     .createGetRequest(configManager.getJiraBaseUrl() + "search?jql=cf%5B" + JiraConstants.GLPI_CUSTOM_FIELD + "%5D~" + idGlpi);
