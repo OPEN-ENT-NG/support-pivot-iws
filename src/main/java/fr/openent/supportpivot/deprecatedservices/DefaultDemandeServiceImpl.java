@@ -18,7 +18,6 @@
 
 package fr.openent.supportpivot.deprecatedservices;
 
-import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.services.MongoService;
 import fr.wseduc.webutils.Either;
@@ -69,9 +68,8 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         this.mongoService = mongoService;
 
         eb = getEventBus(vertx);
-        ConfigManager appConfig = Supportpivot.appConfig;
         this.MAIL_IWS = config.getString("mail-iws");
-        this.COLLECTIVITY_NAME = appConfig.getDefaultCollectivity();
+        this.COLLECTIVITY_NAME = ConfigManager.getInstance().getDefaultCollectivity();
         this.ATTRIBUTION_DEFAULT = config.getString("default-attribution");
         this.TICKETTYPE_DEFAULT = config.getString("default-tickettype");
         this.PRIORITY_DEFAULT = config.getString("default-priority");

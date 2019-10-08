@@ -1,6 +1,5 @@
 package fr.openent.supportpivot.model.ticket;
 
-import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.constants.JiraConstants;
 import fr.openent.supportpivot.managers.ConfigManager;
 import io.vertx.core.json.JsonArray;
@@ -22,18 +21,15 @@ public class JiraTicket implements Ticket {
     private String attributed;
     private String users;
 
-    private ConfigManager configManager;
-
     private JsonObject jsonTicket = new JsonObject();
 
 
     private LinkedList<String> followUps = new LinkedList<String>();
     private LinkedList<String> documents = new LinkedList<String>();
 
-    public JiraTicket(ConfigManager configManager) {
+    public JiraTicket() {
         this.setField();
         this.setProjectKey();
-        this.configManager = configManager;
     }
 
     public JsonObject getField() {
@@ -51,7 +47,7 @@ public class JiraTicket implements Ticket {
 
     @Override
     public String getCollectivity() {
-        return Supportpivot.appConfig.getDefaultCollectivity();
+        return ConfigManager.getInstance().getDefaultCollectivity();
     }
 
     @Override
@@ -127,7 +123,7 @@ public class JiraTicket implements Ticket {
 
     private void setProjectKey() {
         this.getField().put(JiraConstants.PROJECT, new JsonObject()
-                .put(JiraConstants.PROJECT_KEY, this.configManager.getJiraProjectKey()));
+                .put(JiraConstants.PROJECT_KEY, ConfigManager.getInstance().getJiraProjectKey()));
     }
 
     public void setTitle(String title) {
@@ -139,11 +135,11 @@ public class JiraTicket implements Ticket {
     }
 
     public void setGlpiID(String glpiID) {
-        this.getField().put(configManager.getCustomFields().getString(JiraConstants.IDGLPI_FIELD), glpiID);
+        this.getField().put(ConfigManager.getInstance().getCustomFields().getString(JiraConstants.IDGLPI_FIELD), glpiID);
     }
 
     public void setEntID(String entID) {
-        this.getField().put(configManager.getCustomFields().getString(JiraConstants.IDENT_FIELD), entID);
+        this.getField().put(ConfigManager.getInstance().getCustomFields().getString(JiraConstants.IDENT_FIELD), entID);
     }
 
 }

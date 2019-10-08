@@ -47,6 +47,8 @@ public class GlpiConstants {
     public final static String HOST_URL = "http://194.199.35.14:8080";
     public final static String ROOT_URI = "/glpi/plugins/webservices/xmlrpc.php";
 
+    public final static String NOT_AUTHENTICATED_CODE = "13";
+
     /**
      * Mandatory fields
      */
@@ -165,5 +167,6 @@ public class GlpiConstants {
 
     public final static String END_XML_FORMAT = "</struct></value></param></params></methodCall>";
 
-
+    public static final String ERROR_CODE_NAME = "faultCode";
+    public static final String ERROR_LOGIN_CODE = "13";
 }

@@ -4,8 +4,11 @@ import fr.openent.supportpivot.Supportpivot;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
+import org.entcore.common.http.BaseServer;
 
 public class ConfigManager {
+
+    private static JsonObject config;
 
     private final String defaultCollectivity;
     private final String mongoCollection;
@@ -21,13 +24,10 @@ public class ConfigManager {
     private final String jiraProjectKey;
     private final JsonObject customFields;
 
-    private final JsonObject rawConfig;
-
     private static final Logger log = LoggerFactory.getLogger(Supportpivot.class);
 
 
-    public ConfigManager(JsonObject config) {
-        this.rawConfig = config;
+    private ConfigManager() {
 
         this.defaultCollectivity = config.getString("collectivity", "CRNA");
         // Keep default value for backward compatibility
@@ -57,23 +57,11 @@ public class ConfigManager {
         if(defaultCollectivity.isEmpty()) {
             log.warn("Default collectivity absent from configuration");
         }
-
-        /*if(jiraHost.isEmpty()) {
-            log.warn("Jira host absent from configuration");
-        }
-
-        if(jiraBaseUri.isEmpty()) {
-            log.warn("Jira base URI absent from configuration");
-        }*/
     }
 
-    /*public void toHashMapCategories(JsonArray arrayCategories, ) {
-
-    }*/
 
     public String getDefaultCollectivity() { return defaultCollectivity; }
     public String getMongoCollection() { return mongoCollection; }
-    public JsonObject getRawConfig() { return rawConfig; }
 
     public String getGlpiHost() { return glpiHost; }
     public String getGlpiRootUri() { return glpiRootUri; }
@@ -89,4 +77,18 @@ public class ConfigManager {
     public String getJiraBaseUrl() { return jiraHost + jiraBaseUri; }
     public String getJiraProjectKey() { return jiraProjectKey; }
     public JsonObject getCustomFields() { return customFields; }
+
+
+    /** Holder */
+    private static class Holder {
+        private final static ConfigManager instance = new ConfigManager();
+    }
+
+    public static void init(JsonObject configuration) {
+        config = configuration;
+    }
+
+    public static ConfigManager getInstance() {
+        return Holder.instance;
+    }
 }

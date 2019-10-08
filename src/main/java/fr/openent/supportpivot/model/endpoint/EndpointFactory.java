@@ -8,18 +8,16 @@ import io.vertx.core.Vertx;
 public class EndpointFactory {
 
     private HttpClientService httpClientService;
-    private ConfigManager config;
     private Vertx vertx;
 
-    public EndpointFactory(ConfigManager config, HttpClientService httpClientService, DemandeService demandeService, Vertx vertx) {
-        this.config = config;
+    public EndpointFactory(HttpClientService httpClientService, DemandeService demandeService, Vertx vertx) {
         this.httpClientService = httpClientService;
         this.vertx = vertx;
 
     }
 
     public Endpoint getGlpiEndpoint()  {
-        return new GlpiEndpoint(this.config, this.httpClientService);
+        return new GlpiEndpoint(this.httpClientService);
     }
 
     /*public Endpoint getJiraEndpoint()  {

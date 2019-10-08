@@ -18,6 +18,7 @@
 
 package fr.openent.supportpivot.deprecatedservices;
 
+import fr.openent.supportpivot.managers.ConfigManager;
 import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -43,7 +44,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import static fr.openent.supportpivot.constants.PivotConstants.*;
-import static fr.openent.supportpivot.Supportpivot.appConfig;
 
 /**
  * Created by mercierq on 09/02/2018.
@@ -715,7 +715,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
             jsonPivot.put(IDJIRA_FIELD, jiraTicket.getString("key"));
 
-            jsonPivot.put(COLLECTIVITY_FIELD, appConfig.getDefaultCollectivity());
+            jsonPivot.put(COLLECTIVITY_FIELD, ConfigManager.getInstance().getDefaultCollectivity());
             jsonPivot.put(ACADEMY_FIELD, ACADEMY_NAME);
 
             if (fields.getString(JIRA_FIELD.getString("creator")) != null) {

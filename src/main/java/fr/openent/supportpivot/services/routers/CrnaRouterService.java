@@ -26,8 +26,8 @@ public class CrnaRouterService implements RouterService {
     protected static final Logger log = LoggerFactory.getLogger(CrnaRouterService.class);
 
 
-    public CrnaRouterService(HttpClientService httpClientService, DemandeService demandeService, ConfigManager config, Vertx vertx) {
-        EndpointFactory endpointFactory = new EndpointFactory(config, httpClientService, demandeService, vertx);
+    public CrnaRouterService(HttpClientService httpClientService, DemandeService demandeService,  Vertx vertx) {
+        EndpointFactory endpointFactory = new EndpointFactory(httpClientService, demandeService, vertx);
         glpiEndpoint = endpointFactory.getGlpiEndpoint();
         // jiraEndpoint = endpointFactory.getJiraEndpoint();
         pivotEndpoint = endpointFactory.getPivotEndpoint();
@@ -37,35 +37,25 @@ public class CrnaRouterService implements RouterService {
     public void dispatchTicket(String source, PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
         switch (source) {
             case Endpoint.ENDPOINT_ENT:
-                log.info("source ENT");
                 glpiEndpoint.send(ticket, result -> {
                     if (result.succeeded()) {
                         handler.handle(Future.succeededFuture(result.result()));
 
                         pivotEndpoint.send(ticket, resultEnt -> {
                         });
-
-                        /*jiraEndpoint.send(ticket, jiraResult -> { TODO, when Glpi process end, send to jira.
-                            if (jiraResult.succeeded()) {
-                                log.info("resultat(jira)" + jiraResult.result(), jiraResult.result());
-                                // add if result.result() failed
-                            } else {
-                                handler.handle(Future.failedFuture("sending ticket to GLPI failed: " + jiraResult.cause().getMessage()));
-                            }
-                        });*/
                         // add if result.result() failed
                     } else {
-                        handler.handle(Future.failedFuture("sending ticket to GLPI failed: " + result.cause().getMessage()));
+                        handler.handle(Future.failedFuture("sending ticket from ENT to GLPI failed: " + result.cause().getMessage()));
                     }
                 });
                 break;
             case Endpoint.ENDPOINT_GLPI:
-                log.info("source GLPI");
+
                 jiraEndpoint.send(ticket, result -> {
                     if (result.succeeded()) {
                         handler.handle(Future.succeededFuture(result.result()));
                     } else {
-                        handler.handle(Future.failedFuture("ticket creation failed"));
+                        handler.handle(Future.failedFuture("sending ticket from GLPI to JIRA failed: " + result.cause().getMessage()));
                     }
                 });
             case Endpoint.ENDPOINT_JIRA:
@@ -80,17 +70,17 @@ public class CrnaRouterService implements RouterService {
         if (Endpoint.ENDPOINT_ENT.equals(source)) {
             pivotEndpoint.process(ticketdata, result -> {
                 if (result.succeeded()) {
-                    this.dispatchTicket(Endpoint.ENDPOINT_ENT, result.result(), dispatchHandler -> {
-                        //todo Future succeded => return to ent
-
+//                    log.warn("ENT ticket " + result.result().getId() + " scaled");
+                    this.dispatchTicket(source, result.result(), dispatchHandler -> {
+                        log.warn("ENT ticket " + dispatchHandler.result().getId() + " scaled into GLPI (ticket " + dispatchHandler.result().getGlpiId() + ")");
                         handler.handle(Future.succeededFuture(dispatchHandler.result().getJsonTicket()));
                     });
                 } else {
-                    log.error("it failed !" + result.cause().getMessage(), (Object) result.cause().getStackTrace());
+                    log.error("Ticket has not been received from ENT: " + result.cause().getMessage(), (Object) result.cause().getStackTrace());
                 }
             });
         } else {
-            handler.handle(Future.failedFuture("unknown source"));
+            handler.handle(Future.failedFuture("Cannot process ticket due to an unknown source provenance."));
         }
     }
 

@@ -40,13 +40,11 @@ class JiraEndpoint extends BaseServer implements Endpoint {
     private PivotHttpClient httpClient;
     private String token;
     private SimpleDateFormat parser;
-    private ConfigManager configManager;
 
     private static final Logger log = LoggerFactory.getLogger(JiraEndpoint.class);
 
     JiraEndpoint(HttpClientService httpClientService) {
         this.parser = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-        this.configManager = new ConfigManager(config);
 
         try {
             this.httpClient = httpClientService.getHttpClient(GlpiConstants.HOST_URL);
@@ -109,7 +107,7 @@ class JiraEndpoint extends BaseServer implements Endpoint {
     }
 
     private void mapPivotTicketToJira(PivotTicket ticket, Handler<AsyncResult<JiraTicket>> handler) {
-        JiraTicket jiraTicket = new JiraTicket(configManager);
+        JiraTicket jiraTicket = new JiraTicket();
         ticket.getJsonTicket().forEach(field -> {
             switch (field.getKey()) {
                 case PivotConstants.IDGLPI_FIELD:
@@ -133,7 +131,7 @@ class JiraEndpoint extends BaseServer implements Endpoint {
     private void getJiraTicket(String idGlpi, Handler<AsyncResult<JsonObject>> handler) {
         try {
             PivotHttpClientRequest sendingRequest = this.httpClient
-                    .createGetRequest(configManager.getJiraBaseUrl() + "search?jql=cf%5B" + JiraConstants.GLPI_CUSTOM_FIELD + "%5D~" + idGlpi);
+                    .createGetRequest(ConfigManager.getInstance().getJiraBaseUrl() + "search?jql=cf%5B" + JiraConstants.GLPI_CUSTOM_FIELD + "%5D~" + idGlpi);
 
             sendingRequest.startRequest(result -> {
                 if (result.succeeded()) {

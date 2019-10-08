@@ -11,12 +11,12 @@ import org.w3c.dom.NodeList;
 
 public class LoginTool {
 
-    public static void getGlpiSessionToken(ConfigManager config,  PivotHttpClient httpClient, Handler<AsyncResult<String>> handler) {
+    public static void getGlpiSessionToken(PivotHttpClient httpClient, Handler<AsyncResult<String>> handler) {
         try {
-            PivotHttpClientRequest sendingRequest = httpClient.createPostRequest(config.getGlpiRootUri(),
+            PivotHttpClientRequest sendingRequest = httpClient.createPostRequest(ConfigManager.getInstance().getGlpiRootUri(),
                     "<?xml version='1.0' encoding=\"utf-8\" ?><methodCall><methodName>glpi.doLogin</methodName><params><param><value><struct>" +
-                            "<member><name>login_name</name><value><string>" + config.getGlpiLogin() + "</string></value></member>" +
-                            "<member><name>login_password</name><value><string>" + config.getGlpiPassword() + "</string></value></member>" +
+                            "<member><name>login_name</name><value><string>" + ConfigManager.getInstance().getGlpiLogin() + "</string></value></member>" +
+                            "<member><name>login_password</name><value><string>" + ConfigManager.getInstance().getGlpiPassword() + "</string></value></member>" +
                             "</struct></value></param></params></methodCall>"
             );
 

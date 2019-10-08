@@ -35,15 +35,13 @@ public class ServiceManager {
     @SuppressWarnings("unused")
     private ServiceManager(Vertx vertx, JsonObject config, EventBus eb) {
 
-        ConfigManager appConfig = Supportpivot.appConfig;
-
         EmailFactory emailFactory = new EmailFactory(vertx, config);
         EmailSender emailSender = emailFactory.getSender();
 
-        this.mongoService = new MongoService(appConfig.getMongoCollection());
+        this.mongoService = new MongoService(ConfigManager.getInstance().getMongoCollection());
         this.demandeService = new DefaultDemandeServiceImpl(vertx, config, emailSender, mongoService);
         this.httpClientService = new HttpClientService(vertx);
-        this.routeurService = new CrnaRouterService(httpClientService, demandeService, appConfig, vertx);
+        this.routeurService = new CrnaRouterService(httpClientService, demandeService, vertx);
     }
 
     public DemandeService getDemandeService() { return demandeService; }

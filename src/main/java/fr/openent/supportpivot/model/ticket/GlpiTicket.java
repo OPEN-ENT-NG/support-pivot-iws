@@ -1,6 +1,7 @@
 package fr.openent.supportpivot.model.ticket;
 
 import fr.openent.supportpivot.Supportpivot;
+import fr.openent.supportpivot.managers.ConfigManager;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -30,7 +31,7 @@ public class GlpiTicket implements Ticket{
 
     @Override
     public String getCollectivity(){
-        return Supportpivot.appConfig.getDefaultCollectivity();
+        return ConfigManager.getInstance().getDefaultCollectivity();
     }
 
     @Override

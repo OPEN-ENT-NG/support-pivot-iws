@@ -25,13 +25,11 @@ import org.entcore.common.http.BaseServer;
 
 public class Supportpivot extends BaseServer {
 
-	public static ConfigManager appConfig;
-
     @Override
 	public void start() throws Exception {
 		super.start();
+		ConfigManager.init(config);
 
-		appConfig = new ConfigManager(config);
 		addController(new SupportPivotController());
 		addController(new GlpiController());
 	}
