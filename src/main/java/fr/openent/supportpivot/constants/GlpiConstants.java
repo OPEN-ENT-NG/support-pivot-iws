@@ -41,6 +41,7 @@ public class GlpiConstants {
     public final static String ATTACHMENT_NAME_FORM = "name";
     public final static String ATTACHMENT_B64_FORM = "base64";
 
+    public final static String JIRA_ASSIGNED_VALUE = "Support ENT";
 
 //    public final static String GLPI_GET_TYPE_NAME = "type_name";
 
