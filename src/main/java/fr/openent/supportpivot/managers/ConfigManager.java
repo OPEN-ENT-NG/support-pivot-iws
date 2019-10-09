@@ -12,6 +12,8 @@ public class ConfigManager {
 
     private final String defaultCollectivity;
     private final String mongoCollection;
+    private final String proxyHost;
+    private final Integer proxyPort;
     private final String jiraHost;
     private final String jiraBaseUri;
     private final String glpiHost;
@@ -32,6 +34,8 @@ public class ConfigManager {
         this.defaultCollectivity = config.getString("collectivity", "CRNA");
         // Keep default value for backward compatibility
         this.mongoCollection = config.getString("mongo-collection", "support.demandes");
+        this.proxyHost = config.getString("proxy-host", null);
+        this.proxyPort = config.getInteger("proxy-port");
 
         JsonObject configGlpi = config.getJsonObject("glpi");
         this.glpiHost = configGlpi.getString("host");
@@ -62,6 +66,8 @@ public class ConfigManager {
 
     public String getDefaultCollectivity() { return defaultCollectivity; }
     public String getMongoCollection() { return mongoCollection; }
+    public String getProxyHost() { return proxyHost; }
+    public Integer getProxyPort() { return proxyPort; }
 
     public String getGlpiHost() { return glpiHost; }
     public String getGlpiRootUri() { return glpiRootUri; }

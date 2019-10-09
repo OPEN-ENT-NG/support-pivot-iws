@@ -7,6 +7,7 @@ import fr.openent.supportpivot.model.endpoint.EndpointFactory;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
 import fr.openent.supportpivot.model.ticket.Ticket;
 import fr.openent.supportpivot.services.HttpClientService;
+import fr.openent.supportpivot.services.MongoService;
 import fr.openent.supportpivot.services.RouterService;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
@@ -23,11 +24,15 @@ public class CrnaRouterService implements RouterService {
     private Endpoint glpiEndpoint;
     private Endpoint jiraEndpoint;
     private Endpoint pivotEndpoint;
+
+    private MongoService mongoService;
     protected static final Logger log = LoggerFactory.getLogger(CrnaRouterService.class);
 
 
-    public CrnaRouterService(HttpClientService httpClientService, DemandeService demandeService,  Vertx vertx) {
+    public CrnaRouterService(HttpClientService httpClientService, DemandeService demandeService,  MongoService mongoService, Vertx vertx) {
         EndpointFactory endpointFactory = new EndpointFactory(httpClientService, demandeService, vertx);
+        this.mongoService = mongoService;
+
         glpiEndpoint = endpointFactory.getGlpiEndpoint();
         // jiraEndpoint = endpointFactory.getJiraEndpoint();
         pivotEndpoint = endpointFactory.getPivotEndpoint();
@@ -70,6 +75,7 @@ public class CrnaRouterService implements RouterService {
         if (Endpoint.ENDPOINT_ENT.equals(source)) {
             pivotEndpoint.process(ticketdata, result -> {
                 if (result.succeeded()) {
+                    this.mongoService.saveTicket(source, result.result().getJsonTicket());
 //                    log.warn("ENT ticket " + result.result().getId() + " scaled");
                     this.dispatchTicket(source, result.result(), dispatchHandler -> {
                         log.warn("ENT ticket " + dispatchHandler.result().getId() + " scaled into GLPI (ticket " + dispatchHandler.result().getGlpiId() + ")");
@@ -92,6 +98,7 @@ public class CrnaRouterService implements RouterService {
                 if (result.succeeded()) {
                     List<PivotTicket> listTicket = result.result();
                     for (PivotTicket ticket : listTicket) {
+                        this.mongoService.saveTicket(source, ticket.getJsonTicket());
                         dispatchTicket(source, ticket, dispatchResult -> {
                             if (dispatchResult.failed()) {
                                 log.error("Dispatch failed " + dispatchResult.cause().getMessage(), ticket);

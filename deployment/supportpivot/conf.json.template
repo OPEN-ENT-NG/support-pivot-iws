@@ -7,6 +7,8 @@
     	"app-address" : "/supportpivot",
     	"app-icon" : "Supportpivot-large",
         "host": "${host}",
+        "proxy-host": "${supportPivotProxyHost}",
+        "proxy-port": ${supportPivotProxyPort},
         "ssl" : $ssl,
         "auto-redeploy": false,
         "userbook-host": "${host}",
