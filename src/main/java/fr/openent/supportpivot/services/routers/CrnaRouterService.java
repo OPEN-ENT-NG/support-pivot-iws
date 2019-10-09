@@ -12,6 +12,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -46,6 +47,9 @@ public class CrnaRouterService implements RouterService {
                         handler.handle(Future.succeededFuture(result.result()));
 
                         pivotEndpoint.send(ticket, resultEnt -> {
+                            if (resultEnt.failed()) {
+                                log.error("Ticket have not returned to ENT. " + resultEnt.cause().getMessage());
+                            }
                         });
                         // add if result.result() failed
                     } else {
@@ -58,6 +62,7 @@ public class CrnaRouterService implements RouterService {
                 jiraEndpoint.send(ticket, result -> {
                     if (result.succeeded()) {
                         handler.handle(Future.succeededFuture(result.result()));
+                        //TODO update ent id_jira.
                     } else {
                         handler.handle(Future.failedFuture("sending ticket from GLPI to JIRA failed: " + result.cause().getMessage()));
                     }
@@ -91,11 +96,12 @@ public class CrnaRouterService implements RouterService {
 
     @Override
     public void triggerTicket(String source, JsonObject data, Handler<AsyncResult<JsonObject>> handler) {
-        this.mongoService.saveTicket(source, data);
+//        this.mongoService.saveTicket(source, data);
         if (Endpoint.ENDPOINT_GLPI.equals(source)) {
             // traitement du ticket glpi
             glpiEndpoint.trigger(data, result -> {
                 if (result.succeeded()) {
+                    handler.handle(Future.succeededFuture(JsonObject.mapFrom(result.result())));
                     List<PivotTicket> listTicket = result.result();
                     for (PivotTicket ticket : listTicket) {
                         dispatchTicket(source, ticket, dispatchResult -> {
@@ -107,7 +113,6 @@ public class CrnaRouterService implements RouterService {
                         });
                         // check result for return
                     }
-                    handler.handle(Future.succeededFuture(new JsonObject()));
                 } else {
                     handler.handle(Future.failedFuture("ticket creation failed"));
                 }

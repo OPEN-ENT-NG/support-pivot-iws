@@ -49,18 +49,22 @@ class PivotEndpoint implements Endpoint {
             return;
         }
 
-        eventBus
-                .send(PivotConstants.BUS_SEND, new JsonObject()
-                                .put("action", "create")
-                                .put("issue", ticket.getJsonTicket()),
-                        handlerToAsyncHandler(message -> {
-                            if (PivotConstants.ENT_BUS_OK_STATUS.equals(message.body().getString("status"))) {
-                                log.info(message.body());
-                                handler.handle(Future.succeededFuture(new PivotTicket()));
-                            } else {
-                                handler.handle(Future.failedFuture(message.body().toString()));
-                            }
-                        })
-                );
+        try {
+            eventBus
+                    .send(PivotConstants.BUS_SEND, new JsonObject()
+                                    .put("action", "create")
+                                    .put("issue", ticket.getJsonTicket()),
+                            handlerToAsyncHandler(message -> {
+                                if (PivotConstants.ENT_BUS_OK_STATUS.equals(message.body().getString("status"))) {
+                                    log.info(message.body());
+                                    handler.handle(Future.succeededFuture(new PivotTicket()));
+                                } else {
+                                    handler.handle(Future.failedFuture(message.body().toString()));
+                                }
+                            })
+                    );
+        } catch (Error e) {
+            handler.handle(Future.failedFuture(e.getMessage()));
+        }
     }
 }

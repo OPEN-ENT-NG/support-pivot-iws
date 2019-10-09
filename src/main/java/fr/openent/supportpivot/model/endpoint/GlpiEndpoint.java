@@ -63,25 +63,18 @@ class GlpiEndpoint implements Endpoint {
         // avec en parametres la session, l'id ticket (et le id2name pour permettre à id de nommer la traduction des champs)
 
         //recupere le ticket avec toutes les infos
-        if (this.token != null) {
-
-            getGlpiTickets(result -> {
-                if (result.succeeded()) {
-                    Document xmlTickets = result.result();
-                    mapXmlGlpiToJsonPivot(xmlTickets, resultJson -> {
-                        if (resultJson.succeeded()) {
-                            handler.handle(Future.succeededFuture(resultJson.result()));
-                        }
-                    });
-                } else {
-                    handler.handle(Future.failedFuture(result.cause().getMessage()));
-                }
-            });
-
-        } else {
-            log.error("Session error");
-        }
-
+        this.getGlpiTickets(result -> {
+            if (result.succeeded()) {
+                Document xmlTickets = result.result();
+                mapXmlGlpiToJsonPivot(xmlTickets, resultJson -> {
+                    if (resultJson.succeeded()) {
+                        handler.handle(Future.succeededFuture(resultJson.result()));
+                    }
+                });
+            } else {
+                handler.handle(Future.failedFuture(result.cause().getMessage()));
+            }
+        });
         // TODO
         // jsonTickets = service.GetTickets
         // jsonTickets.foreach(ticket =>)
@@ -134,12 +127,12 @@ class GlpiEndpoint implements Endpoint {
 
     /**
      * Send a request to GLPI:
-     *  - add the current token to the current request
-     *  - if request login failed, re-login, and resend the same request (with new token)
-     *  - handle the xml body of the response.
+     * - add the current token to the current request
+     * - if request login failed, re-login, and resend the same request (with new token)
+     * - handle the xml body of the response.
      *
-     * @param method Used to send request ("POST", "GET", ...)
-     * @param uri Called to GLPI
+     * @param method  Used to send request ("POST", "GET", ...)
+     * @param uri     Called to GLPI
      * @param xmlData Passed to the request
      * @param handler To return result of the request
      */
@@ -279,7 +272,7 @@ class GlpiEndpoint implements Endpoint {
      * and if it has been, the request, the request must be rerun
      *
      * @param xmlResult From the current sent request
-     * @param handler return if the token has not been reloaded or otherwise, the request must be rerun
+     * @param handler   return if the token has not been reloaded or otherwise, the request must be rerun
      */
     private void noReloginCheck(Document xmlResult, Handler<AsyncResult<Boolean>> handler) {
         if (this.loginCheckCounter == 3) {
@@ -393,6 +386,8 @@ class GlpiEndpoint implements Endpoint {
             String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>glpi.listTickets</methodName><params><param><value><struct>" +
                     "<member><name>id2name</name><value><string></string></value></member>" +
                     GlpiConstants.END_XML_FORMAT;
+
+
             this.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), ParserTool.getParsedXml(xml), result -> {
                 if (result.succeeded()) {
                     handler.handle(Future.succeededFuture(result.result()));
@@ -423,6 +418,9 @@ class GlpiEndpoint implements Endpoint {
                     NodeList value = (NodeList) path.compile("value").evaluate(fields.item(j), XPathConstants.NODESET);
                     this.parseGlpiFieldToPivot(name.item(0).getTextContent(), value, pivotTicket);
                 }
+
+                this.addComments(pivotTicket);
+
                 pivotTickets.add(pivotTicket);
             }
             handler.handle(Future.succeededFuture(pivotTickets));
@@ -459,7 +457,7 @@ class GlpiEndpoint implements Endpoint {
         try {
             switch (name) {
                 case GlpiConstants.ID_FIELD:
-                    pivotTicket.setId(pivotValue);
+                    pivotTicket.setGlpiId(pivotValue);
                     break;
                 case GlpiConstants.TITLE_FIELD:
                     pivotTicket.setTitle(pivotValue);
@@ -476,7 +474,7 @@ class GlpiEndpoint implements Endpoint {
                     pivotValue = mapGlpiPriorityValueToPivot(pivotValue);
                     pivotTicket.setPriority(pivotValue);
                     break;
-                case GlpiConstants.MODULES_FIELD: // TODO: find a way to map it (Ask the Boss master "Laurent")
+                case GlpiConstants.MODULES_FIELD:
                     pivotValue = mapGlpiModuleValueToPivot(pivotValue.trim());
                     pivotTicket.setCategorie(pivotValue);
                     break;
@@ -492,15 +490,25 @@ class GlpiEndpoint implements Endpoint {
                         String typeName = nodeTypeName.item(0).getTextContent();
                         expr = path.compile("value/array/data/value/struct/member");
                         NodeList userFields = (NodeList) expr.evaluate(type, XPathConstants.NODESET);
-                        if (typeName.equals(GlpiConstants.REQUESTER_FIELD)) {
-                            for (int j = 0; j < userFields.getLength(); j++) {
-                                NodeList requesterFieldName = (NodeList) path.compile("name").evaluate(userFields.item(j), XPathConstants.NODESET);
-                                NodeList requesterFieldValue = (NodeList) path.compile("value").evaluate(userFields.item(j), XPathConstants.NODESET);
-                                if (requesterFieldName.item(0).getTextContent().equals("name")) {
-                                    pivotTicket.setCreator(requesterFieldValue.item(0).getTextContent());
+                        for (int j = 0; j < userFields.getLength(); j++) {
+                            NodeList requesterFieldName = (NodeList) path.compile("name").evaluate(userFields.item(j), XPathConstants.NODESET);
+                            NodeList requesterFieldValue = (NodeList) path.compile("value").evaluate(userFields.item(j), XPathConstants.NODESET);
+                            if (requesterFieldName.item(0).getTextContent().equals("name")) {
+                                switch (typeName) {
+                                    case GlpiConstants.REQUESTER_FIELD:
+                                        pivotTicket.setCreator(requesterFieldValue.item(0).getTextContent());
+                                        break;
+                                    case GlpiConstants.ASSIGN_FIELD:
+                                        if (requesterFieldValue.item(0).getTextContent().trim().equals(GlpiConstants.JIRA_ASSIGNED_VALUE)) {
+                                            pivotTicket.setAttributed();
+                                        }
+                                        break;
                                 }
                             }
-                            break;
+
+                            if (requesterFieldName.item(0).getTextContent().equals("name")) {
+                                pivotTicket.setCreator(requesterFieldValue.item(0).getTextContent());
+                            }
                         }
                     }
                     break;
@@ -561,5 +569,9 @@ class GlpiEndpoint implements Endpoint {
         }
 
         return PivotConstants.PRIORITY_MAJOR;
+    }
+
+    private void addComments(PivotTicket pivotTicket) {
+//        pivotTicket
     }
 }
