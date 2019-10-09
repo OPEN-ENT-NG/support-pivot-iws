@@ -1,7 +1,6 @@
 package fr.openent.supportpivot.services.routers;
 
 import fr.openent.supportpivot.deprecatedservices.DemandeService;
-import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.model.endpoint.Endpoint;
 import fr.openent.supportpivot.model.endpoint.EndpointFactory;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
@@ -72,10 +71,10 @@ public class CrnaRouterService implements RouterService {
 
     @Override
     public void processTicket(String source, JsonObject ticketdata, Handler<AsyncResult<JsonObject>> handler) {
+        this.mongoService.saveTicket(source, ticketdata);
         if (Endpoint.ENDPOINT_ENT.equals(source)) {
             pivotEndpoint.process(ticketdata, result -> {
                 if (result.succeeded()) {
-                    this.mongoService.saveTicket(source, result.result().getJsonTicket());
 //                    log.warn("ENT ticket " + result.result().getId() + " scaled");
                     this.dispatchTicket(source, result.result(), dispatchHandler -> {
                         log.warn("ENT ticket " + dispatchHandler.result().getId() + " scaled into GLPI (ticket " + dispatchHandler.result().getGlpiId() + ")");
@@ -92,13 +91,13 @@ public class CrnaRouterService implements RouterService {
 
     @Override
     public void triggerTicket(String source, JsonObject data, Handler<AsyncResult<JsonObject>> handler) {
+        this.mongoService.saveTicket(source, data);
         if (Endpoint.ENDPOINT_GLPI.equals(source)) {
             // traitement du ticket glpi
             glpiEndpoint.trigger(data, result -> {
                 if (result.succeeded()) {
                     List<PivotTicket> listTicket = result.result();
                     for (PivotTicket ticket : listTicket) {
-                        this.mongoService.saveTicket(source, ticket.getJsonTicket());
                         dispatchTicket(source, ticket, dispatchResult -> {
                             if (dispatchResult.failed()) {
                                 log.error("Dispatch failed " + dispatchResult.cause().getMessage(), ticket);
