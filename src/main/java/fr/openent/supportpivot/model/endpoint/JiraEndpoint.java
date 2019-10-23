@@ -61,6 +61,7 @@ class JiraEndpoint extends BaseServer implements Endpoint {
                     JsonObject jsonTicket = new JsonObject(body.toString());
                     jiraService.convertJiraReponseToJsonPivot(jsonTicket, resultPivot -> {
                         log.info(resultPivot.right());
+                        log.info(resultPivot.left());
                         //TODO set PivotTicket -> handle success Pivot ticket.
                     });
                 });
