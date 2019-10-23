@@ -1,64 +1,49 @@
 package fr.openent.supportpivot.model.endpoint;
 
-import fr.openent.supportpivot.Supportpivot;
-import fr.openent.supportpivot.constants.GlpiConstants;
 import fr.openent.supportpivot.constants.JiraConstants;
 import fr.openent.supportpivot.constants.PivotConstants;
-import fr.openent.supportpivot.helpers.LoginTool;
-import fr.openent.supportpivot.helpers.ParserTool;
+import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
+import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
 import fr.openent.supportpivot.helpers.PivotHttpClient;
 import fr.openent.supportpivot.helpers.PivotHttpClientRequest;
 import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.model.ticket.JiraTicket;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
-import fr.openent.supportpivot.model.ticket.Ticket;
 import fr.openent.supportpivot.services.HttpClientService;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.http.HttpClientRequest;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import org.entcore.common.http.BaseServer;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
-import javax.xml.xpath.*;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
-import java.util.Objects;
 
 
 class JiraEndpoint extends BaseServer implements Endpoint {
 
-
-    //    private HttpClientService httpClientService;
     private PivotHttpClient httpClient;
-    private String token;
-    private SimpleDateFormat parser;
+    private DefaultDemandeServiceImpl demandeService;
+    private DefaultJiraServiceImpl jiraService;
+    private static Base64.Encoder encoder = Base64.getMimeEncoder().withoutPadding();
+
 
     private static final Logger log = LoggerFactory.getLogger(JiraEndpoint.class);
 
-    JiraEndpoint(HttpClientService httpClientService) {
-        this.parser = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
+    JiraEndpoint(HttpClientService httpClientService, DefaultDemandeServiceImpl demandeService, DefaultJiraServiceImpl jiraService) {
         try {
-            this.httpClient = httpClientService.getHttpClient(GlpiConstants.HOST_URL);
+            this.httpClient = httpClientService.getHttpClient(ConfigManager.getInstance().getJiraHost());
         } catch (URISyntaxException e) {
             log.error("invalid uri " + e);
         }
 
-        /*LoginTool.getGlpiSessionToken(this.httpClient, handler -> {
-            if (handler.succeeded()) {
-                this.token = handler.result();
-            } else {
-                log.error(handler.cause().getMessage(), (Object) handler.cause().getStackTrace());
-            }
-        });*/
+        this.demandeService = demandeService;
+        this.jiraService = jiraService;
     }
 
     @Override
@@ -67,6 +52,19 @@ class JiraEndpoint extends BaseServer implements Endpoint {
 
     @Override
     public void process(JsonObject ticketData, Handler<AsyncResult<PivotTicket>> handler) {
+        final String id_jira = ticketData.getString("idjira");
+        this.getJiraTicket(id_jira, result -> {
+            HttpClientResponse response = result.result();
+            if (response.statusCode() == 200) {
+                response.bodyHandler(body -> {
+                    JsonObject jsonTicket = new JsonObject(body.toString());
+                    jiraService.convertJiraReponseToJsonPivot(jsonTicket, resultPivot -> {
+                        log.info(resultPivot);
+                        //TODO set PivotTicket -> handle success Pivot ticket.
+                    });
+                });
+            }
+        });
     }
 
     @Override
@@ -128,23 +126,30 @@ class JiraEndpoint extends BaseServer implements Endpoint {
         handler.handle(Future.succeededFuture(jiraTicket));
     }
 
-    private void getJiraTicket(String idGlpi, Handler<AsyncResult<JsonObject>> handler) {
+    private void getJiraTicket(String idGlpi, Handler<AsyncResult<HttpClientResponse>> handler) {
         try {
-            PivotHttpClientRequest sendingRequest = this.httpClient
-                    .createGetRequest(ConfigManager.getInstance().getJiraBaseUrl() + "search?jql=cf%5B" + JiraConstants.GLPI_CUSTOM_FIELD + "%5D~" + idGlpi);
+            String uri = ConfigManager.getInstance().getJiraBaseUri() + "search?jql=cf%5B" + JiraConstants.IWS_CUSTOM_FIELD + "%5D~" + idGlpi;
+            PivotHttpClientRequest sendingRequest = this.httpClient.createRequest("GET", uri, "");
+            this.setHeaderRequest(sendingRequest);
 
             sendingRequest.startRequest(result -> {
                 if (result.succeeded()) {
-                    result.result().bodyHandler(body -> {
-                        log.info("Jira body content" + body.toString());
-                        handler.handle(Future.succeededFuture(body.toJsonObject()));
-                    });
+                    handler.handle(Future.succeededFuture(result.result()));
                 } else {
-                    handler.handle(Future.failedFuture(result.cause()));
+                    handler.handle(Future.failedFuture(result.cause().getMessage()));
                 }
             });
         } catch (Exception e) {
             handler.handle(Future.failedFuture(e));
+        }
+    }
+
+    private void setHeaderRequest(PivotHttpClientRequest request) {
+        HttpClientRequest clientRequest = request.getHttpClientRequest();
+        clientRequest.putHeader("Authorization", "Basic " + encoder.encodeToString(ConfigManager.getInstance().getJiraAuthInfo().getBytes()))
+                .setFollowRedirects(true);
+        if (!clientRequest.headers().contains("Content-Type")) {
+            clientRequest.putHeader("Content-Type", "application/json");
         }
     }
 }

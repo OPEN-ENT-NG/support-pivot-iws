@@ -24,6 +24,8 @@ public class ConfigManager {
     private final String glpiType;
     private final JsonObject glpiLocation;
     private final String jiraProjectKey;
+    private final String jiraLogin;
+    private final String jiraPassword;
     private final JsonObject customFields;
 
     private static final Logger log = LoggerFactory.getLogger(Supportpivot.class);
@@ -53,8 +55,9 @@ public class ConfigManager {
 
         this.jiraHost = config.getString("jira-host");
         this.jiraBaseUri = config.getString("jira-base-uri");
-
         this.jiraProjectKey = config.getString("jira-project-key");
+        this.jiraLogin = config.getString("jira-login");
+        this.jiraPassword = config.getString("jira-passwd");
 
         this.customFields = config.getJsonObject("jira-custom-fields");
 
@@ -81,6 +84,9 @@ public class ConfigManager {
     public String getJiraHost() { return jiraHost; }
     public String getJiraBaseUri() { return jiraBaseUri; }
     public String getJiraBaseUrl() { return jiraHost + jiraBaseUri; }
+    public String getJiraLogin() { return jiraLogin; }
+    public String getJiraPassword() { return jiraPassword; }
+    public String getJiraAuthInfo() { return jiraLogin + ":" + jiraPassword; }
     public String getJiraProjectKey() { return jiraProjectKey; }
     public JsonObject getCustomFields() { return customFields; }
 

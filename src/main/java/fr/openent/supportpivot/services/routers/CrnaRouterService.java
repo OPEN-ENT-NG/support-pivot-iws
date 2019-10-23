@@ -32,7 +32,7 @@ public class CrnaRouterService implements RouterService {
         this.mongoService = mongoService;
 
         glpiEndpoint = endpointFactory.getGlpiEndpoint();
-        // jiraEndpoint = endpointFactory.getJiraEndpoint();
+        jiraEndpoint = endpointFactory.getJiraEndpoint();
         pivotEndpoint = endpointFactory.getPivotEndpoint();
     }
 
@@ -49,7 +49,6 @@ public class CrnaRouterService implements RouterService {
                                 log.error("Ticket have not returned to ENT. " + resultEnt.cause().getMessage());
                             }
                         });
-                        // add if result.result() failed
                     } else {
                         handler.handle(Future.failedFuture("sending ticket from ENT to GLPI failed: " + result.cause().getMessage()));
                     }
@@ -65,8 +64,22 @@ public class CrnaRouterService implements RouterService {
                         handler.handle(Future.failedFuture("sending ticket from GLPI to JIRA failed: " + result.cause().getMessage()));
                     }
                 });
+
             case Endpoint.ENDPOINT_JIRA:
-                log.info("source JIRA");
+                glpiEndpoint.send(ticket, result -> {
+                    if (result.succeeded()) {
+                        pivotEndpoint.send(ticket, resultPivot -> {
+                            if (resultPivot.succeeded()) {
+                                handler.handle(Future.succeededFuture(result.result()));
+                            } else {
+                                handler.handle(Future.failedFuture("sending ticket from Jira to GLPI and then to ENT failed: " + result.cause().getMessage()));
+                            }
+                        });
+                    } else {
+                        handler.handle(Future.failedFuture("sending ticket from Jira to GLPI failed: " + result.cause().getMessage()));
+                    }
+                });
+                break;
             default:
                 handler.handle(Future.failedFuture("unknown source"));
         }

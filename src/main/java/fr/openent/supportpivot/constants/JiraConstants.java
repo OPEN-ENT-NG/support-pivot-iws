@@ -71,6 +71,7 @@ public class JiraConstants {
     public static final String TYPE_ANOMALY = "Anomalie";
 
     public static final String GLPI_CUSTOM_FIELD = "12700";
+    public static final String IWS_CUSTOM_FIELD = "12400";
 
     public final static Map<String, String> APPLICATIONS_MAP = new HashMap<String, String>()
     {

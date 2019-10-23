@@ -41,6 +41,8 @@ public class PivotTicket implements Ticket {
         return jsonTicket.getString(PivotConstants.IDJIRA_FIELD, null);
     }
 
+    public String getIwsId() { return jsonTicket.getString(PivotConstants.IDIWS_FIELD, null); }
+
     public String getId() {
         return jsonTicket.getString(PivotConstants.ID_FIELD, null);
     }
@@ -141,7 +143,9 @@ public class PivotTicket implements Ticket {
     }
 
     @Override
-    public String getAttributed() { return jsonTicket.getString(PivotConstants.ATTRIBUTION_FIELD); }
+    public String getAttributed() {
+        return jsonTicket.getString(PivotConstants.ATTRIBUTION_FIELD);
+    }
 
 
     /* SETTERS */
@@ -180,6 +184,10 @@ public class PivotTicket implements Ticket {
 
     public void setGlpiId(String glpiId) {
         jsonTicket.put(PivotConstants.IDGLPI_FIELD, glpiId.trim());
+    }
+
+    public void setJiraId(String glpiId) {
+        jsonTicket.put(PivotConstants.IDJIRA_FIELD, glpiId.trim());
     }
 
     public void setCreator(String creator) {

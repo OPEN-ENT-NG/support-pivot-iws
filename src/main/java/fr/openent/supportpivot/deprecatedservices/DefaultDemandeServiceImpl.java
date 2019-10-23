@@ -22,6 +22,8 @@ import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.services.MongoService;
 import fr.wseduc.webutils.Either;
 import fr.wseduc.webutils.email.EmailSender;
+import io.vertx.core.AsyncResult;
+import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.EventBus;
@@ -86,17 +88,16 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         mongoService.saveTicket(ATTRIBUTION_IWS, jsonPivot);
 
         StringBuilder missingMandatoryFields = new StringBuilder();
-        for( String field : IWS_MANDATORY_FIELDS ) {
-            if( ! jsonPivot.containsKey(field) ) {
+        for (String field : IWS_MANDATORY_FIELDS) {
+            if (!jsonPivot.containsKey(field)) {
                 missingMandatoryFields.append(field);
                 missingMandatoryFields.append(", ");
             }
         }
 
-        if( missingMandatoryFields.length() != 0 ) {
-            handler.handle(new Either.Left<>("2;Mandatory Field "+ missingMandatoryFields));
-        }
-        else {
+        if (missingMandatoryFields.length() != 0) {
+            handler.handle(new Either.Left<>("2;Mandatory Field " + missingMandatoryFields));
+        } else {
             add(request, jsonPivot, ATTRIBUTION_IWS, handler);
         }
 
@@ -107,6 +108,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
      * - Check every mandatory field is present in jsonPivot, then send for treatment
      * - Replace empty values by default ones
      * - Replace modules names
+     *
      * @param jsonPivot JSON object in PIVOT format
      */
     public void treatTicketFromENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
@@ -114,35 +116,34 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         mongoService.saveTicket(ATTRIBUTION_ENT, jsonPivot);
 
         StringBuilder missingMandatoryFields = new StringBuilder();
-        for( String field : ENT_MANDATORY_FIELDS ) {
-            if( ! jsonPivot.containsKey(field) ) {
+        for (String field : ENT_MANDATORY_FIELDS) {
+            if (!jsonPivot.containsKey(field)) {
                 missingMandatoryFields.append(field);
                 missingMandatoryFields.append(", ");
             }
         }
 
-        if( missingMandatoryFields.length() != 0 ) {
-            handler.handle(new Either.Left<>("2;Mandatory Field "+ missingMandatoryFields));
+        if (missingMandatoryFields.length() != 0) {
+            handler.handle(new Either.Left<>("2;Mandatory Field " + missingMandatoryFields));
 
-        }
-        else {
-            if( !jsonPivot.containsKey(COLLECTIVITY_FIELD) ) {
+        } else {
+            if (!jsonPivot.containsKey(COLLECTIVITY_FIELD)) {
                 jsonPivot.put(COLLECTIVITY_FIELD, COLLECTIVITY_NAME);
             }
-            if( !jsonPivot.containsKey(ATTRIBUTION_FIELD) ) {
+            if (!jsonPivot.containsKey(ATTRIBUTION_FIELD)) {
                 jsonPivot.put(ATTRIBUTION_FIELD, ATTRIBUTION_DEFAULT);
             }
-            if( !jsonPivot.containsKey(TICKETTYPE_FIELD) ) {
+            if (!jsonPivot.containsKey(TICKETTYPE_FIELD)) {
                 jsonPivot.put(TICKETTYPE_FIELD, TICKETTYPE_DEFAULT);
             }
-            if( !jsonPivot.containsKey(PRIORITY_FIELD) ) {
+            if (!jsonPivot.containsKey(PRIORITY_FIELD)) {
                 jsonPivot.put(PRIORITY_FIELD, PRIORITY_DEFAULT);
             }
-            if( jsonPivot.containsKey(DATE_CREA_FIELD) ) {
+            if (jsonPivot.containsKey(DATE_CREA_FIELD)) {
                 String sqlDate = jsonPivot.getString(DATE_CREA_FIELD);
                 jsonPivot.put(DATE_CREA_FIELD, formatSqlDate(sqlDate));
             }
-            if( jsonPivot.containsKey(STATUSENT_FIELD)
+            if (jsonPivot.containsKey(STATUSENT_FIELD)
                     && jsonPivot.getString(STATUSENT_FIELD) != null
                     && !jsonPivot.getString(STATUSENT_FIELD).isEmpty()) {
                 String newStatus;
@@ -168,9 +169,9 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
             JsonArray modules = jsonPivot.getJsonArray(MODULES_FIELD, new fr.wseduc.webutils.collections.JsonArray());
             JsonArray newModules = new fr.wseduc.webutils.collections.JsonArray();
-            for(Object o : modules){
-                if( o instanceof String ) {
-                    String module = (String)o;
+            for (Object o : modules) {
+                if (o instanceof String) {
+                    String module = (String) o;
                     newModules.add(moduleEntToPivot(module));
                 }
             }
@@ -182,6 +183,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     /**
      * Get a modules name ENT-like, returns the module name PIVOT-like
      * Returns original name by default
+     *
      * @param moduleName ENT-like module name
      * @return PIVOT-like module name encoded in UTF-8
      */
@@ -191,6 +193,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
     /**
      * Format a Date from SQL-like format to dd/MM/yyyy
+     *
      * @param sqlDate date to format
      * @return The date formatted, or the original date is case of error
      */
@@ -209,40 +212,40 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     /**
      * Get a JSON in Pivot format, and send the information to the right recipient
      * Save the ticket to mongo before processing
+     *
      * @param jsonPivot Json in pivot format
      */
     private void add(final HttpServerRequest request, JsonObject jsonPivot,
                      final String source, final Handler<Either<String, JsonObject>> handler) {
 
         String attribution = jsonPivot.getString(ATTRIBUTION_FIELD);
-        if( !ATTRIBUTION_CGI.equals(attribution)
+        if (!ATTRIBUTION_CGI.equals(attribution)
                 && !ATTRIBUTION_ENT.equals(attribution)
-                && !ATTRIBUTION_IWS.equals(attribution))
-        {
-            handler.handle(new Either.Left<>("3;Invalid value for "+ATTRIBUTION_FIELD ));
+                && !ATTRIBUTION_IWS.equals(attribution)) {
+            handler.handle(new Either.Left<>("3;Invalid value for " + ATTRIBUTION_FIELD));
             return;
         }
 
-        switch(source) {
+        switch (source) {
             case ATTRIBUTION_IWS:
                 boolean sentToEnt = false;
-                if(jsonPivot.containsKey(ID_FIELD)
+                if (jsonPivot.containsKey(ID_FIELD)
                         && !jsonPivot.getString(ID_FIELD).isEmpty()) {
                     sendToENT(jsonPivot, handler);
                     sentToEnt = true;
                 }
                 //TODO  ici il y a un problème : l'état de la maj de l'ENt est renvoyée vers IWS mais l'algo se proursuit
                 //vers la maj de JIRA. ENT peut être KO, mais JIRA se mete à jour quand même, ou alors JIRA est KO mais IWS n'est pas averti
-                if(ATTRIBUTION_CGI.equals(attribution) || (jsonPivot.containsKey(IDJIRA_FIELD)
+                if (ATTRIBUTION_CGI.equals(attribution) || (jsonPivot.containsKey(IDJIRA_FIELD)
                         && !jsonPivot.getString(IDJIRA_FIELD).isEmpty())) {
-                    Handler<Either<String,JsonObject>> newHandler;
-                    if(sentToEnt) {
+                    Handler<Either<String, JsonObject>> newHandler;
+                    if (sentToEnt) {
                         newHandler = jiraResponse -> {
-                            if(jiraResponse.isLeft()) {
+                            if (jiraResponse.isLeft()) {
                                 log.error("Supportpivot : could not save ticket to JIRA");
                             }
                         };
-                    } else  {
+                    } else {
                         newHandler = handler;
                     }
                     sendToJIRA(request, jsonPivot, newHandler);
@@ -251,10 +254,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
             case ATTRIBUTION_ENT:
                 sendToIWS(request, jsonPivot, handler);
-                if(jsonPivot.containsKey(IDJIRA_FIELD)
+                if (jsonPivot.containsKey(IDJIRA_FIELD)
                         && jsonPivot.getString(IDJIRA_FIELD).isEmpty()) {
                     sendToJIRA(request, jsonPivot, jiraResponse -> {
-                        if(jiraResponse.isLeft()) {
+                        if (jiraResponse.isLeft()) {
                             log.error("Supportpivot : could not save ticket to JIRA");
                         }
                     });
@@ -263,10 +266,10 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
             case ATTRIBUTION_CGI:
                 sendToIWS(request, jsonPivot, handler);
-                if(jsonPivot.containsKey(ID_FIELD)
+                if (jsonPivot.containsKey(ID_FIELD)
                         && jsonPivot.getString(ID_FIELD).isEmpty()) {
                     sendToENT(jsonPivot, entResponse -> {
-                        if(entResponse.isLeft()) {
+                        if (entResponse.isLeft()) {
                             log.error("Supportpivot : could not send JIRA ticket to ENT" + entResponse.left().getValue());
                         }
                     });
@@ -278,11 +281,12 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
     /**
      * Send pivot information to ENT -- using internal bus
+     *
      * @param jsonPivot JSON in pivot format
      */
     public void sendToENT(JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
-        if(!jsonPivot.containsKey(ID_FIELD)
+        if (!jsonPivot.containsKey(ID_FIELD)
                 || jsonPivot.getString(ID_FIELD).isEmpty()) {
             handler.handle(new Either.Left<>("2;Mandatory field " + ID_FIELD));
             return;
@@ -290,7 +294,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         eb.send(ENT_TRACKERUPDATE_ADDRESS,
                 new JsonObject().put("action", "create").put("issue", jsonPivot),
                 handlerToAsyncHandler(message -> {
-                    if("OK".equals(message.body().getString("status"))) {
+                    if ("OK".equals(message.body().getString("status"))) {
                         handler.handle(new Either.Right<>(message.body()));
                     } else {
                         handler.handle(new Either.Left<>("999;" + message.body().toString()));
@@ -298,9 +302,25 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 }));
     }
 
+    /**
+     * Send pivot information to JIRA
+     *
+     * @param jsonPivotIn JSON in pivot format
+     */
+    public void sendToJIRA(JsonObject jsonPivotIn, final Handler<AsyncResult<JsonObject>> handler) {
+        jiraService.sendToJIRA(jsonPivotIn, result -> {
+            if (result.isRight()) {
+                handler.handle(Future.succeededFuture(result.right().getValue().getJsonObject("jsonPivotCompleted")));
+            } else {
+                handler.handle(Future.failedFuture(result.left().getValue()));
+            }
+        });
+    }
+
 
     /**
      * Send pivot information to JIRA
+     *
      * @param jsonPivotIn JSON in pivot format
      */
     private void sendToJIRA(final HttpServerRequest request, JsonObject jsonPivotIn,
@@ -309,7 +329,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                 && !jsonPivotIn.getString(IDJIRA_FIELD).isEmpty());
         jiraService.sendToJIRA(jsonPivotIn, eitherJsonPivotOut -> {
             if (eitherJsonPivotOut.isRight()) {
-                if(!ticketAlreadyExistsInJira) {
+                if (!ticketAlreadyExistsInJira) {
 
                     //return to IWS ticket with Id_JIRA
                     sendToIWS(request,
@@ -325,37 +345,38 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     }
 
     private String safeField(String inField) {
-        if(inField == null) return null;
-        return inField.replace("="," =");
+        if (inField == null) return null;
+        return inField.replace("=", " =");
     }
 
     /**
      * Send pivot information to IWS -- by mail
      * Every data must be htmlEncoded because of encoding / mails incompatibility
+     *
      * @param jsonPivot JSON in pivot format
      */
     private void sendToIWS(HttpServerRequest request, JsonObject jsonPivot, final Handler<Either<String, JsonObject>> handler) {
 
         StringBuilder mail = new StringBuilder()
-            .append("<br/>Collectivite=")
-            .append(jsonPivot.getString(COLLECTIVITY_FIELD))
-            .append("<br/>academie=")
-            .append(jsonPivot.getString(ACADEMY_FIELD, ""))
-            .append("<br/>demandeur=")
-            .append(safeField(jsonPivot.getString(CREATOR_FIELD)))
-            .append("<br/>type_demande=")
-            .append(jsonPivot.getString(TICKETTYPE_FIELD, ""))
-            .append("<br/>titre=")
-            .append(safeField(jsonPivot.getString(TITLE_FIELD)))
-            .append("<br/>description=")
-            .append(safeField(jsonPivot.getString(DESCRIPTION_FIELD)))
-            .append("<br/>priorite=")
-            .append(jsonPivot.getString(PRIORITY_FIELD, ""));
+                .append("<br/>Collectivite=")
+                .append(jsonPivot.getString(COLLECTIVITY_FIELD))
+                .append("<br/>academie=")
+                .append(jsonPivot.getString(ACADEMY_FIELD, ""))
+                .append("<br/>demandeur=")
+                .append(safeField(jsonPivot.getString(CREATOR_FIELD)))
+                .append("<br/>type_demande=")
+                .append(jsonPivot.getString(TICKETTYPE_FIELD, ""))
+                .append("<br/>titre=")
+                .append(safeField(jsonPivot.getString(TITLE_FIELD)))
+                .append("<br/>description=")
+                .append(safeField(jsonPivot.getString(DESCRIPTION_FIELD)))
+                .append("<br/>priorite=")
+                .append(jsonPivot.getString(PRIORITY_FIELD, ""));
 
-        JsonArray modules =   jsonPivot.getJsonArray(MODULES_FIELD, new fr.wseduc.webutils.collections.JsonArray());
+        JsonArray modules = jsonPivot.getJsonArray(MODULES_FIELD, new fr.wseduc.webutils.collections.JsonArray());
         mail.append("<br/>modules=[");
-        for(int i=0 ; i<modules.size();i++){
-            if(i > 0) {
+        for (int i = 0; i < modules.size(); i++) {
+            if (i > 0) {
                 mail.append(", ");
             }
             mail.append(modules.getString(i));
@@ -363,42 +384,42 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         mail.append("]");
 
         mail.append("<br/>id_jira=")
-            .append(jsonPivot.getString(IDJIRA_FIELD, ""))
-            .append("<br/>id_ent=")
-            .append(jsonPivot.getString(ID_FIELD, ""))
-            .append("<br/>id_iws=")
-            .append(jsonPivot.getString(IDIWS_FIELD, ""));
+                .append(jsonPivot.getString(IDJIRA_FIELD, ""))
+                .append("<br/>id_ent=")
+                .append(jsonPivot.getString(ID_FIELD, ""))
+                .append("<br/>id_iws=")
+                .append(jsonPivot.getString(IDIWS_FIELD, ""));
 
         JsonArray comm = jsonPivot.getJsonArray(COMM_FIELD, new fr.wseduc.webutils.collections.JsonArray());
-        for(int i=0 ; i<comm.size();i++){
+        for (int i = 0; i < comm.size(); i++) {
             mail.append("<br/>commentaires=")
                     .append(safeField(comm.getString(i)));
         }
 
         mail.append("<br/>statut_iws=")
-            .append(jsonPivot.getString(STATUSIWS_FIELD, ""))
-            .append("<br/>statut_ent=")
-            .append(jsonPivot.getString(STATUSENT_FIELD, ""))
-            .append("<br/>statut_jira=")
-            .append(jsonPivot.getString(STATUSJIRA_FIELD, ""))
-            .append("<br/>date_creation=")
-            .append(jsonPivot.getString(DATE_CREA_FIELD, ""))
-            .append("<br/>date_resolution_iws=")
-            .append(jsonPivot.getString(DATE_RESOIWS_FIELD, ""))
-            .append("<br/>date_resolution_ent=")
-            .append(jsonPivot.getString(DATE_RESO_FIELD, ""))
-            .append("<br/>date_resolution_jira=")
-            .append(jsonPivot.getString(DATE_RESOJIRA_FIELD, ""))
-            .append("<br/>reponse_technique=")
-            .append(safeField(jsonPivot.getString(TECHNICAL_RESP_FIELD, "")))
-            .append("<br/>reponse_client=")
-            .append(safeField(jsonPivot.getString(CLIENT_RESP_FIELD, "")))
-            .append("<br/>attribution=")
-            .append(jsonPivot.getString(ATTRIBUTION_FIELD))
-            .append("<br/>");
+                .append(jsonPivot.getString(STATUSIWS_FIELD, ""))
+                .append("<br/>statut_ent=")
+                .append(jsonPivot.getString(STATUSENT_FIELD, ""))
+                .append("<br/>statut_jira=")
+                .append(jsonPivot.getString(STATUSJIRA_FIELD, ""))
+                .append("<br/>date_creation=")
+                .append(jsonPivot.getString(DATE_CREA_FIELD, ""))
+                .append("<br/>date_resolution_iws=")
+                .append(jsonPivot.getString(DATE_RESOIWS_FIELD, ""))
+                .append("<br/>date_resolution_ent=")
+                .append(jsonPivot.getString(DATE_RESO_FIELD, ""))
+                .append("<br/>date_resolution_jira=")
+                .append(jsonPivot.getString(DATE_RESOJIRA_FIELD, ""))
+                .append("<br/>reponse_technique=")
+                .append(safeField(jsonPivot.getString(TECHNICAL_RESP_FIELD, "")))
+                .append("<br/>reponse_client=")
+                .append(safeField(jsonPivot.getString(CLIENT_RESP_FIELD, "")))
+                .append("<br/>attribution=")
+                .append(jsonPivot.getString(ATTRIBUTION_FIELD))
+                .append("<br/>");
 
         String mailTo = jsonPivot.getString("email");
-        if( mailTo == null || mailTo.isEmpty() ) {
+        if (mailTo == null || mailTo.isEmpty()) {
             mailTo = this.MAIL_IWS;
         }
 
@@ -415,9 +436,9 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         JsonArray savedInfoPJ = new fr.wseduc.webutils.collections.JsonArray();
         JsonArray atts = jsonPivot.getJsonArray(ATTACHMENT_FIELD, new fr.wseduc.webutils.collections.JsonArray());
         for (Object o : atts) {
-            if( !(o instanceof JsonObject)) continue;
-            JsonObject jsonAtt = (JsonObject)o;
-            if(!jsonAtt.containsKey(ATTACHMENT_NAME_FIELD)
+            if (!(o instanceof JsonObject)) continue;
+            JsonObject jsonAtt = (JsonObject) o;
+            if (!jsonAtt.containsKey(ATTACHMENT_NAME_FIELD)
                     || !jsonAtt.containsKey(ATTACHMENT_CONTENT_FIELD)) continue;
             JsonObject att = new JsonObject();
             att.put("name", jsonAtt.getString(ATTACHMENT_NAME_FIELD));
@@ -431,7 +452,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
         //store in mongo sent mail
         mongoService.saveTicket("mail", savedInfo);
 
-        if(emailSender==null){
+        if (emailSender == null) {
             handler.handle(new Either.Left<>("999;EmailSender module not found"));
             return;
         }
@@ -450,6 +471,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
     /**
      * Send updated informations from a Jira ticket to IWS
+     *
      * @param idJira idJira updated in Jira to send to IWS
      */
     @Override
@@ -458,12 +480,11 @@ public class DefaultDemandeServiceImpl implements DemandeService {
                                     final Handler<Either<String, JsonObject>> handler) {
 
 
-
         jiraService.getFromJira(request, idJira, stringJsonObjectEither -> {
             if (stringJsonObjectEither.isRight()) {
                 JsonObject jsonPivot = stringJsonObjectEither.right().getValue();
                 mongoService.saveTicket(ATTRIBUTION_CGI, jsonPivot);
-                add(request,jsonPivot , ATTRIBUTION_CGI, handler);
+                add(request, jsonPivot, ATTRIBUTION_CGI, handler);
             } else {
                 handler.handle(new Either.Left<>(
                         "Error, the ticket has not been sent, it doesn't exist."));
