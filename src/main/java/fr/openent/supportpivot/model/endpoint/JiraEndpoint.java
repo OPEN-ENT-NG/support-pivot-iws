@@ -4,6 +4,7 @@ import fr.openent.supportpivot.constants.JiraConstants;
 import fr.openent.supportpivot.constants.PivotConstants;
 import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
 import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
+import fr.openent.supportpivot.helpers.ParserTool;
 import fr.openent.supportpivot.helpers.PivotHttpClient;
 import fr.openent.supportpivot.helpers.PivotHttpClientRequest;
 import fr.openent.supportpivot.managers.ConfigManager;
@@ -59,7 +60,7 @@ class JiraEndpoint extends BaseServer implements Endpoint {
                 response.bodyHandler(body -> {
                     JsonObject jsonTicket = new JsonObject(body.toString());
                     jiraService.convertJiraReponseToJsonPivot(jsonTicket, resultPivot -> {
-                        log.info(resultPivot);
+                        log.info(resultPivot.right());
                         //TODO set PivotTicket -> handle success Pivot ticket.
                     });
                 });
@@ -69,7 +70,7 @@ class JiraEndpoint extends BaseServer implements Endpoint {
 
     @Override
     public void send(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
-        if (ticket.getAttributed().equals(PivotConstants.ATTRIBUTION_NAME) && ticket.getGlpiId() != null) {
+        if (ticket.getGlpiId() != null && ticket.getAttributed() != null && ticket.getAttributed().equals(PivotConstants.ATTRIBUTION_NAME)) {
             this.getJiraTicket(ticket.getGlpiId(), result -> {
                 if (result.succeeded()) {
                     HttpClientResponse response = result.result();

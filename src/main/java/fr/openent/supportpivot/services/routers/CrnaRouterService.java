@@ -82,15 +82,15 @@ public class CrnaRouterService implements RouterService {
                         handler.handle(Future.failedFuture(message));
                     }
                 });
-
+                break;
             case Endpoint.ENDPOINT_JIRA:
                 glpiEndpoint.send(ticket, result -> {
                     if (result.succeeded()) {
                         pivotEndpoint.send(ticket, resultPivot -> {
                             if (resultPivot.succeeded()) {
-                                handler.handle(Future.succeededFuture(result.result()));
+                                handler.handle(Future.succeededFuture(resultPivot.result()));
                             } else {
-                                handler.handle(Future.failedFuture("sending ticket from Jira to GLPI and then to ENT failed: " + result.cause().getMessage()));
+                                handler.handle(Future.failedFuture("sending ticket from Jira to GLPI and then to ENT failed: " + resultPivot.cause().getMessage()));
                             }
                         });
                     } else {
@@ -123,7 +123,7 @@ public class CrnaRouterService implements RouterService {
                     log.error("Ticket has not been received from ENT: " + result.cause().getMessage(), (Object) result.cause().getStackTrace());
                 }
             });
-        } else if(Endpoint.ENDPOINT_JIRA.equals(source)) {
+        } else if (Endpoint.ENDPOINT_JIRA.equals(source)) {
             jiraEndpoint.process(ticketdata, result -> {
                 if (result.succeeded()) {
                     this.dispatchTicket(source, result.result(), dispatchHandler -> {
