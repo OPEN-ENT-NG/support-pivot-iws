@@ -55,13 +55,31 @@ public class CrnaRouterService implements RouterService {
                 });
                 break;
             case Endpoint.ENDPOINT_GLPI:
-
+                Future jiraFuture = Future.future();
                 jiraEndpoint.send(ticket, result -> {
                     if (result.succeeded()) {
-                        handler.handle(Future.succeededFuture(result.result()));
-                        //TODO update ent id_jira.
+                        jiraFuture.complete(result.result());
                     } else {
-                        handler.handle(Future.failedFuture("sending ticket from GLPI to JIRA failed: " + result.cause().getMessage()));
+                        jiraFuture.fail("sending ticket from GLPI to JIRA failed: " + result.cause().getMessage());
+                    }
+                });
+
+                Future entFuture = Future.future();
+                pivotEndpoint.send(ticket, result -> {
+                    if (result.succeeded()) {
+                        entFuture.complete(result.result());
+                    } else {
+                        entFuture.fail("sending ticket from GLPI to ENT failed: " + result.cause().getMessage());
+                    }
+                });
+                CompositeFuture.all(jiraFuture, entFuture).setHandler(event -> {
+                    if (event.succeeded()) {
+                        log.info("ticket id_glpi: " + ticket.getGlpiId() + " scaled");
+                        handler.handle(Future.succeededFuture(ticket));
+                    } else {
+                        String message = "ticket id_glpi: " + ticket.getGlpiId() + " can not be scaled: " + event.cause().getMessage();
+                        log.error(message);
+                        handler.handle(Future.failedFuture(message));
                     }
                 });
 
@@ -134,20 +152,30 @@ public class CrnaRouterService implements RouterService {
             // traitement du ticket glpi
             glpiEndpoint.trigger(data, result -> {
                 if (result.succeeded()) {
-                    handler.handle(Future.succeededFuture(JsonObject.mapFrom(result.result())));
+                    handler.handle(Future.succeededFuture(convertListPivotTicketToJsonObject(result.result())));
                     List<PivotTicket> listTicket = result.result();
+                    List<Future> futures = new ArrayList<>();
                     for (PivotTicket ticket : listTicket) {
-                        dispatchTicket(source, ticket, dispatchResult -> {
+                        Future<PivotTicket> future = Future.future();
+                        futures.add(future);
+                        this.dispatchTicket(source, ticket, dispatchResult -> {
                             if (dispatchResult.failed()) {
-                                log.error("Dispatch failed " + dispatchResult.cause().getMessage(), ticket);
+                                future.fail("Dispatch failed " + dispatchResult.cause().getMessage());
                             } else {
-                                log.info("dispatch succeeded");
+                                future.complete(dispatchResult.result());
                             }
                         });
                         // check result for return
                     }
+                    CompositeFuture.join(futures).setHandler(event -> {
+                        if (event.succeeded()) {
+                            log.info("Dispatch Glpi ticket to jira succeed");
+                        } else {
+                            log.info("Dispatch Glpi ticket to jira failed: " + event.cause().getMessage());
+                        }
+                    });
                 } else {
-                    handler.handle(Future.failedFuture("ticket creation failed"));
+                    handler.handle(Future.failedFuture("ticket creation failed: " + result.cause().getMessage()));
                 }
             });
         } else {

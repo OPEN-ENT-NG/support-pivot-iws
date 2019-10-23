@@ -69,39 +69,37 @@ class JiraEndpoint extends BaseServer implements Endpoint {
 
     @Override
     public void send(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
-        //TODO => check if Attributed user is the "support-pivot" one.
-        // TODO => check if it's create or update.
-
-        if (ticket.getAttributed().equals(PivotConstants.ATTRIBUTION_CGI) && ticket.getGlpiId() != null) {
+        if (ticket.getAttributed().equals(PivotConstants.ATTRIBUTION_NAME) && ticket.getGlpiId() != null) {
             this.getJiraTicket(ticket.getGlpiId(), result -> {
                 if (result.succeeded()) {
-                    log.info("in case that it works: " + result.result().toString());
-                    //TODO in case that we find ticket, map it.
+                    HttpClientResponse response = result.result();
+                    if (response.statusCode() == 200) {
+                        response.bodyHandler(body -> {
+                            JsonObject jsonTicket = new JsonObject(body.toString());
+                            if (jsonTicket.getInteger("total") >= 1) {
+                                ticket.setJiraId(jsonTicket.getJsonArray("issues").getJsonObject(0).getString("id"));
+                            }
+                            this.demandeService.sendToJIRA(ticket.getJsonTicket(), resultJira -> {
+                                if (resultJira.succeeded()) {
+                                    PivotTicket pivotTicket = new PivotTicket();
+                                    pivotTicket.setJsonObject(resultJira.result());
+                                    handler.handle(Future.succeededFuture(pivotTicket));
+                                } else {
+                                    handler.handle(Future.failedFuture(resultJira.cause().getMessage()));
+                                }
+                            });
+                        });
+                    } else {
+                        handler.handle(Future.failedFuture("A problem occurred when trying to get ticket from jira (id_glpi: " + ticket.getGlpiId() + "): "));
+                    }
+
                 } else {
-                    log.info("in case that it does not works: " + result.cause().getMessage());
-
-                    // IN CASE THAT WE DONT FIND TICKET
-
+                    handler.handle(Future.failedFuture("An problem occurred when trying to get ticket from jira (id_glpi: " + ticket.getGlpiId() + "): "));
                 }
-
-
-
-                /*if (!result.failed()) {
-                 *//*if (result.succeeded()) {
-                    this.updateJiraTicket(result.result(), ticket);
-                } else {
-                    this.createJiraTicket(result.result(), ticket);
-                }*//*
-                }*/
             });
-        }
-
-        /*if (this.token != null) {
-
-
         } else {
-            log.error("Session error");
-        }*/
+            handler.handle(Future.failedFuture("Ticket (id_glpi: " + ticket.getGlpiId() + ") is not attributed"));
+        }
     }
 
     private void mapPivotTicketToJira(PivotTicket ticket, Handler<AsyncResult<JiraTicket>> handler) {

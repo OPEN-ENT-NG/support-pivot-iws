@@ -9,6 +9,7 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static fr.wseduc.webutils.Server.getEventBus;
@@ -47,27 +48,50 @@ class PivotEndpoint implements Endpoint {
 
         String ticketId = ticket.getId();
 
+        List<Future> futures = new ArrayList<>();
         if (ticketId == null || ticketId.isEmpty()) {
-            handler.handle(Future.failedFuture("Field mandatory: " + PivotConstants.ID_FIELD));
+            Future<Boolean> future = Future.future();
+            futures.add(future);
+            this.glpiService.getTicket(ticket.getGlpiId(), result -> {
+                if (result.succeeded()) {
+                    this.glpiService.getIdFromGlpiTicket(result.result(), resultId -> {
+                        if (result.succeeded()) {
+                            ticket.setId(resultId.result());
+                            future.complete();
+                        } else {
+                            future.fail("An error occurred while: " + PivotConstants.ID_FIELD + ". " + result.cause().getMessage());
+                        }
+                    });
+
+                } else {
+                    future.fail("Field mandatory: " + PivotConstants.ID_FIELD + ". " + result.cause().getMessage());
+                }
+            });
             return;
         }
 
-        try {
-            eventBus
-                    .send(PivotConstants.BUS_SEND, new JsonObject()
-                                    .put("action", "create")
-                                    .put("issue", ticket.getJsonTicket()),
-                            handlerToAsyncHandler(message -> {
-                                if (PivotConstants.ENT_BUS_OK_STATUS.equals(message.body().getString("status"))) {
-                                    log.info(message.body());
-                                    handler.handle(Future.succeededFuture(new PivotTicket()));
-                                } else {
-                                    handler.handle(Future.failedFuture(message.body().toString()));
-                                }
-                            })
-                    );
-        } catch (Error e) {
-            handler.handle(Future.failedFuture(e.getMessage()));
-        }
+        CompositeFuture.all(futures).setHandler(event -> {
+            if (event.succeeded()) {
+                try {
+                    eventBus
+                            .send(PivotConstants.BUS_SEND, new JsonObject()
+                                            .put("action", "create")
+                                            .put("issue", ticket.getJsonTicket()),
+                                    handlerToAsyncHandler(message -> {
+                                        if (PivotConstants.ENT_BUS_OK_STATUS.equals(message.body().getString("status"))) {
+                                            log.info(message.body());
+                                            handler.handle(Future.succeededFuture(new PivotTicket()));
+                                        } else {
+                                            handler.handle(Future.failedFuture(message.body().toString()));
+                                        }
+                                    })
+                            );
+                } catch (Error e) {
+                    handler.handle(Future.failedFuture(e.getMessage()));
+                }
+            } else {
+                handler.handle(Future.failedFuture(event.cause().getCause()));
+            }
+        });
     }
 }
