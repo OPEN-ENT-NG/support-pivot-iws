@@ -1,22 +1,20 @@
 package fr.openent.supportpivot.services.routers;
 
-import fr.openent.supportpivot.deprecatedservices.DemandeService;
+import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
+import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
 import fr.openent.supportpivot.model.endpoint.Endpoint;
 import fr.openent.supportpivot.model.endpoint.EndpointFactory;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
-import fr.openent.supportpivot.model.ticket.Ticket;
+import fr.openent.supportpivot.services.GlpiService;
 import fr.openent.supportpivot.services.HttpClientService;
 import fr.openent.supportpivot.services.MongoService;
 import fr.openent.supportpivot.services.RouterService;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.json.Json;
+import io.vertx.core.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CrnaRouterService implements RouterService {
@@ -29,8 +27,8 @@ public class CrnaRouterService implements RouterService {
     protected static final Logger log = LoggerFactory.getLogger(CrnaRouterService.class);
 
 
-    public CrnaRouterService(HttpClientService httpClientService, DemandeService demandeService,  MongoService mongoService, Vertx vertx) {
-        EndpointFactory endpointFactory = new EndpointFactory(httpClientService, demandeService, vertx);
+    public CrnaRouterService(HttpClientService httpClientService, DefaultDemandeServiceImpl demandeService, DefaultJiraServiceImpl jiraService, GlpiService glpiService, MongoService mongoService, Vertx vertx) {
+        EndpointFactory endpointFactory = new EndpointFactory(httpClientService, demandeService, jiraService, glpiService, vertx);
         this.mongoService = mongoService;
 
         glpiEndpoint = endpointFactory.getGlpiEndpoint();
@@ -80,10 +78,32 @@ public class CrnaRouterService implements RouterService {
         if (Endpoint.ENDPOINT_ENT.equals(source)) {
             pivotEndpoint.process(ticketdata, result -> {
                 if (result.succeeded()) {
-//                    log.warn("ENT ticket " + result.result().getId() + " scaled");
                     this.dispatchTicket(source, result.result(), dispatchHandler -> {
-                        log.warn("ENT ticket " + dispatchHandler.result().getId() + " scaled into GLPI (ticket " + dispatchHandler.result().getGlpiId() + ")");
-                        handler.handle(Future.succeededFuture(dispatchHandler.result().getJsonTicket()));
+                        if (dispatchHandler.failed()) {
+                            String message = "Dispatch ticket failed" + dispatchHandler.cause().getMessage();
+                            log.error(message);
+                            handler.handle(Future.failedFuture(message));
+                        } else {
+                            log.warn("ENT ticket " + dispatchHandler.result().getId() + " scaled into GLPI (ticket " + dispatchHandler.result().getGlpiId() + ")");
+                            handler.handle(Future.succeededFuture(dispatchHandler.result().getJsonTicket()));
+                        }
+                    });
+                } else {
+                    log.error("Ticket has not been received from ENT: " + result.cause().getMessage(), (Object) result.cause().getStackTrace());
+                }
+            });
+        } else if(Endpoint.ENDPOINT_JIRA.equals(source)) {
+            jiraEndpoint.process(ticketdata, result -> {
+                if (result.succeeded()) {
+                    this.dispatchTicket(source, result.result(), dispatchHandler -> {
+                        if (dispatchHandler.failed()) {
+                            String message = "Dispatch ticket failed" + dispatchHandler.cause().getMessage();
+                            log.error(message);
+                            handler.handle(Future.failedFuture(message));
+                        } else {
+                            log.warn("ENT ticket " + dispatchHandler.result().getId() + " scaled into GLPI (ticket " + dispatchHandler.result().getGlpiId() + ")");
+                            handler.handle(Future.succeededFuture(dispatchHandler.result().getJsonTicket()));
+                        }
                     });
                 } else {
                     log.error("Ticket has not been received from ENT: " + result.cause().getMessage(), (Object) result.cause().getStackTrace());
@@ -122,11 +142,12 @@ public class CrnaRouterService implements RouterService {
         }
     }
 
-    private void routeTicket(String source, Ticket ticket, Handler<AsyncResult<JsonObject>> handler) {
-        // todo routing
+    private JsonObject convertListPivotTicketToJsonObject(List<PivotTicket> pivotTickets) {
+        JsonObject jsonPivotTickets = new JsonObject();
+        for (int i = 0; i < pivotTickets.size(); i++) {
+            jsonPivotTickets.put(String.valueOf(i), pivotTickets.get(i).getJsonTicket());
+        }
+        return jsonPivotTickets;
     }
-
-//les fonctions du router service
-    //aide defaultdemande serviceImpl
 
 }

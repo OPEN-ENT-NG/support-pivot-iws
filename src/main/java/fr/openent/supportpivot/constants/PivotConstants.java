@@ -29,9 +29,16 @@ public class PivotConstants {
     public final static String MODULESJIRA_FIELD = "modules_jira";
 
     public final static String COMM_FIELD = "commentaires";
+
     public final static String ATTACHMENT_FIELD = "pj";
     public final static String ATTACHMENT_NAME_FIELD = "nom";
     public final static String ATTACHMENT_CONTENT_FIELD = "contenu";
+    public final static String ATTACHMENT_GLPI_ID_FIELD = "id_glpi";
+    public final static String ATTACHMENT_TYPE_FIELD = "Content-type";
+    public static final String ATTACHMENT_ENCODING_FIELD = "Content-Transfer-Encoding";
+    public static final String ATTACHMENT_ENCODING_BASE64 = "base64";
+
+
     public final static String STATUSIWS_FIELD = "statut_iws";
     public final static String STATUSENT_FIELD = "statut_ent";
     public final static String STATUSJIRA_FIELD = "statut_jira";
@@ -54,7 +61,6 @@ public class PivotConstants {
     public final static String ATTRIBUTION_GLPI = "GLPI";
     public final static String ATTRIBUTION_NAME = "support-CGI";
 
-    //TODO voir si utile ici
     public final static String IDGLPI_FIELD = "id_glpi";
     public final static String STATUSGLPI_FIELD = "status_glpi";
     public final static String DATE_RESOGLPI_FIELD = "date_resolution_glpi";
@@ -94,11 +100,6 @@ public class PivotConstants {
     public static final String STATUS_OPENED = "En cours";
     public static final String STATUS_RESOLVED = "R&eacute;solu";
     public static final String STATUS_CLOSED = "Ferm&eacute;";
-//####################### TODO add in jira constants / glpi constants
-    /*public static final String STATUS_NEW = "Ouvert";
-    public static final String STATUS_OPENED = "En cours";
-    public static final String STATUS_RESOLVED = "R&eacute;solu";
-    public static final String STATUS_CLOSED = "Ferm&eacute;";*/
 
     public static final List<String> STATUS_LIST = Arrays.asList(
             STATUS_NEW,
@@ -161,7 +162,9 @@ public class PivotConstants {
             put("/xiti",stringEncode("Xiti"));
         }
     };
-
+    public static final String COMM_GLPI_ID_FIELD = "id_glpi";
+    public static final String COMM_USER_NAME_FIELD = "user_name";
+    public static final String COMM_CONTENT_FIELD = "content";
 
     /**
      * Encode a string in UTF-8

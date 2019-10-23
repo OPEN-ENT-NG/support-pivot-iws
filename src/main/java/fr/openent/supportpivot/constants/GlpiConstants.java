@@ -14,7 +14,7 @@ public class GlpiConstants {
     public final static String CREATOR_FIELD = "user_name";
 
     public final static String ASSIGN_FIELD = "assign";
-    public final static String ATTRIBUTION_FIELD = "user_name";
+    public final static String ATTRIBUTION_FIELD = "users_name";
 
     public final static String OBSERVER_FIELD = "observer";
     public final static String OBSERVER_NAME = "user_name";
@@ -30,23 +30,34 @@ public class GlpiConstants {
     public final static String TASKS_FIELD = "tasks";
     public final static String EVENT_FIELD = "event";
 
+    public final static String EVENTS_FIELD = "events";
+    public final static String EVENTS_FIELD_FIELD = "field";
     public final static String ATTACHMENT_FIELD = "documents";
     public final static String ATTACHMENT_NAME_FIELD = "filename";
+    public final static String ATTACHMENT_ID_FIELD = "id";
     public final static String ATTACHMENT_CONTENT_FIELD = "filepath";
+    public final static String ATTACHMENT_TYPE_FIELD = "mime";
+
     public final static String STATUS_FIELD = "status";
     public final static String DATE_CREA_FIELD = "date_creation";
     public final static String DATE_RESO_FIELD = "solvedate";
     public final static String DATE_UPDATE_FIELD = "date_mod";
 
+    public static final String COMM_ID_FIELD = "id";
+    public static final String COMM_USER_NAME_FIELD = "users_name";
+    public static final String COMM_CONTENT_FIELD = "content";
+
     public final static String ATTACHMENT_NAME_FORM = "name";
     public final static String ATTACHMENT_B64_FORM = "base64";
 
-    public final static String JIRA_ASSIGNED_VALUE = "Support ENT";
 
 //    public final static String GLPI_GET_TYPE_NAME = "type_name";
 
     public final static String HOST_URL = "http://194.199.35.14:8080";
     public final static String ROOT_URI = "/glpi/plugins/webservices/xmlrpc.php";
+
+    public final static String JIRA_ASSIGNED_VALUE = "Support ENT";
+    public static final String ASSIGNED_FORM = "user";
 
     public final static String NOT_AUTHENTICATED_CODE = "13";
 
