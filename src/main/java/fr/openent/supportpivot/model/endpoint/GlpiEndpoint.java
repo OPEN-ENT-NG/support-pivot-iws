@@ -3,25 +3,20 @@ package fr.openent.supportpivot.model.endpoint;
 import fr.openent.supportpivot.constants.GlpiConstants;
 import fr.openent.supportpivot.constants.PivotConstants;
 import fr.openent.supportpivot.helpers.ParserTool;
-import fr.openent.supportpivot.helpers.PivotHttpClient;
-import fr.openent.supportpivot.helpers.PivotHttpClientRequest;
 import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
-import fr.openent.supportpivot.services.HttpClientService;
-import fr.openent.supportpivot.helpers.LoginTool;
+import fr.openent.supportpivot.services.GlpiService;
 import io.vertx.core.AsyncResult;
+import io.vertx.core.CompositeFuture;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 
 import javax.xml.xpath.*;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -29,39 +24,20 @@ import java.util.Objects;
 
 class GlpiEndpoint implements Endpoint {
 
-
-    //    private HttpClientService httpClientService;
-    private PivotHttpClient httpClient;
+    private GlpiService glpiService;
     private XPath path;
-    private String token;
-    private Integer loginCheckCounter;
 
     private static final Logger log = LoggerFactory.getLogger(GlpiEndpoint.class);
 
-    GlpiEndpoint(HttpClientService httpClientService) {
-        this.loginCheckCounter = 0;
+
+    GlpiEndpoint(GlpiService glpiService) {
+        this.glpiService = glpiService;
         XPathFactory xpf = XPathFactory.newInstance();
         this.path = xpf.newXPath();
-        this.token = "";
-
-        try {
-            this.httpClient = httpClientService.getHttpClient(ConfigManager.getInstance().getGlpiHost());
-        } catch (URISyntaxException e) {
-            log.error("invalid uri " + e);
-        }
     }
 
     @Override
     public void trigger(JsonObject data, Handler<AsyncResult<List<PivotTicket>>> handler) {
-        //les updates qui nest pas le ticjket complet + recupere le ticket complet et envoyer les infos
-        //il faut appeler la methode glpi.doLogin
-        // avec en parametres login et password
-
-        //recuperer la valeur de la session
-
-        //il faut ensuite appeler la methode glpi.getTicket
-        // avec en parametres la session, l'id ticket (et le id2name pour permettre à id de nommer la traduction des champs)
-
         //recupere le ticket avec toutes les infos
         this.getGlpiTickets(result -> {
             if (result.succeeded()) {
@@ -69,36 +45,22 @@ class GlpiEndpoint implements Endpoint {
                 mapXmlGlpiToJsonPivot(xmlTickets, resultJson -> {
                     if (resultJson.succeeded()) {
                         handler.handle(Future.succeededFuture(resultJson.result()));
+                    } else {
+                        handler.handle(Future.failedFuture(resultJson.cause().getMessage()));
                     }
                 });
             } else {
                 handler.handle(Future.failedFuture(result.cause().getMessage()));
             }
         });
-        // TODO
-        // jsonTickets = service.GetTickets
-        // jsonTickets.foreach(ticket =>)
-        // Vérification après cron => GetTicket, etc
-        // return list tickets
-
-
     }
 
     @Override
     public void process(JsonObject ticketData, Handler<AsyncResult<PivotTicket>> handler) {
-        //creer le ticket a partir du json object
-        //creer le ticket
-
-        // TODO ici: error
-
-        // (Exclusivement  ENT): modif/Creation => envoi un ticket => traiter
-
-
     }
 
     @Override
     public void send(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
-        // TODO get ticket from GLPI and add an "if ticket exist" => update else => create
         if (ticket.getGlpiId() == null) {
             this.createGlpiTicket(ticket, result -> {
                 if (result.succeeded()) {
@@ -117,114 +79,14 @@ class GlpiEndpoint implements Endpoint {
                 }
             });
         }
-
-        // TODO VERIFIER L'EXISTENCE
-        // Après trigger ou process d'un autre endpoint
-        // en fonction Créer ou Vérifier les données de Mise à jour
-        // convertir en GLPI
-
-    }
-
-    /**
-     * Send a request to GLPI:
-     * - add the current token to the current request
-     * - if request login failed, re-login, and resend the same request (with new token)
-     * - handle the xml body of the response.
-     *
-     * @param method  Used to send request ("POST", "GET", ...)
-     * @param uri     Called to GLPI
-     * @param xmlData Passed to the request
-     * @param handler To return result of the request
-     */
-    private void sendRequest(String method, String uri, Document xmlData, Handler<AsyncResult<Document>> handler) {
-        this.setXmlToken(xmlData);
-
-        PivotHttpClientRequest sendingRequest = this.httpClient.createRequest(method, uri, ParserTool.getStringFromDocument(xmlData));
-        this.setHeaderRequest(sendingRequest);
-
-        sendingRequest.startRequest(result -> {
-            if (result.succeeded()) {
-                result.result().bodyHandler(body -> {
-                    Document xml = ParserTool.getParsedXml(body);
-                    this.noReloginCheck(xml, loginResult -> {
-                        if (loginResult.succeeded()) {
-                            if (loginResult.result()) {
-                                handler.handle(Future.succeededFuture(xml));
-                            } else {
-                                this.sendRequest(method, uri, xmlData, requestResult -> {
-                                    if (requestResult.succeeded()) {
-                                        handler.handle(Future.succeededFuture(requestResult.result()));
-                                    } else {
-                                        handler.handle(Future.failedFuture(
-                                                "Error at re-sending request after re-authentication: "
-                                                        + requestResult.cause().getMessage())
-                                        );
-                                    }
-                                });
-                            }
-                        } else {
-                            handler.handle(Future.failedFuture("Authentication problem: " + loginResult.cause().getMessage()));
-                        }
-                    });
-                });
-            } else {
-                handler.handle(Future.failedFuture("Sending request failed: " + result.cause().getMessage()));
-            }
-        });
-
-    }
-
-    /**
-     * Set session parameter of the given xml request with the current token.
-     *
-     * @param xml which will get the new session parameter set with the current token.
-     */
-    private void setXmlToken(Document xml) {
-        try {
-            String expression = "//methodCall/params/param/value/struct/member";
-            NodeList fields = (NodeList) path.evaluate(expression, xml, XPathConstants.NODESET);
-
-            for (int i = 0; i < fields.getLength(); i++) {
-                NodeList name = (NodeList) path.compile("name").evaluate(fields.item(i), XPathConstants.NODESET);
-                if (name.item(0).getTextContent().equals("session")) {
-                    NodeList value = (NodeList) path.compile("value").evaluate(fields.item(i), XPathConstants.NODESET);
-                    value.item(0).setNodeValue(this.token);
-                    return;
-                }
-            }
-
-            expression = "//methodCall/params/param/value/struct";
-            Node struct = ((NodeList) path.evaluate(expression, xml, XPathConstants.NODESET)).item(0);
-
-            Element member = xml.createElement("member");
-            Element name = xml.createElement("name");
-            Element value = xml.createElement("value");
-            Element stringValue = xml.createElement("string");
-
-            name.setTextContent("session");
-            stringValue.setTextContent(this.token);
-
-            value.appendChild(stringValue);
-            member.appendChild(name);
-            member.appendChild(value);
-
-            struct.appendChild(member);
-
-            /*Element structElem = (Element) struct.item(0);
-            Node importNode = structElem.importNode(member, true); //TODO find a way to import member document, into struct one.*/
-
-        } catch (XPathExpressionException e) {
-            e.printStackTrace();
-        }
-
     }
 
     private void createGlpiTicket(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
-        Document xmlTicket = xmlFormTicket(ticket);
-        this.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), xmlTicket, result -> {
+        Document xmlTicket = xmlFormTicket(ticket, "glpi.createTicket");
+        this.glpiService.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), xmlTicket, result -> {
             if (result.succeeded()) {
                 Document xml = result.result();
-                this.getIdFromGlpiTicket(xml, handlerId -> {
+                this.glpiService.getIdFromGlpiTicket(xml, handlerId -> {
 
                     String id = handlerId.result().trim();
 
@@ -317,10 +179,9 @@ class GlpiEndpoint implements Endpoint {
     }
 
     private void sendTicketGlpi(Document xml, Handler<AsyncResult<JsonObject>> handler) {
-        this.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), xml, result -> {
+        this.glpiService.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), xml, result -> {
             if (result.succeeded()) {
                 handler.handle(Future.succeededFuture());
-                // TODO check if request well passed (this means that we've no "faultcode" in response.
             } else {
                 handler.handle(Future.failedFuture(result.cause()));
             }
@@ -377,10 +238,6 @@ class GlpiEndpoint implements Endpoint {
         return "<member><name>" + fieldName + "</name><value><" + valueType + ">" + value + "</" + valueType + "></value></member>";
     }
 
-    private void setHeaderRequest(PivotHttpClientRequest request) {
-        request.getHttpClientRequest().putHeader("Content-Type", "text/xml");
-    }
-
     private void getGlpiTickets(Handler<AsyncResult<Document>> handler) {
         try {
             String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>glpi.listTickets</methodName><params><param><value><struct>" +
@@ -388,7 +245,7 @@ class GlpiEndpoint implements Endpoint {
                     GlpiConstants.END_XML_FORMAT;
 
 
-            this.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), ParserTool.getParsedXml(xml), result -> {
+            this.glpiService.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), ParserTool.getParsedXml(xml), result -> {
                 if (result.succeeded()) {
                     handler.handle(Future.succeededFuture(result.result()));
                 } else {

@@ -1,7 +1,7 @@
 package fr.openent.supportpivot.managers;
 
-import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
+import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
 import fr.openent.supportpivot.deprecatedservices.DemandeService;
 import fr.openent.supportpivot.helpers.LoginTool;
 import fr.openent.supportpivot.helpers.ParserTool;
@@ -18,7 +18,9 @@ public class ServiceManager {
 
 
     // Deprecated Services
-    private DemandeService demandeService;
+    private DefaultDemandeServiceImpl demandeService;
+    private DefaultJiraServiceImpl jiraService;
+    private GlpiService glpiService;
     private MongoService mongoService;
     private RouterService routeurService;
     private HttpClientService httpClientService;
@@ -41,7 +43,9 @@ public class ServiceManager {
         this.mongoService = new MongoService(ConfigManager.getInstance().getMongoCollection());
         this.demandeService = new DefaultDemandeServiceImpl(vertx, config, emailSender, mongoService);
         this.httpClientService = new HttpClientService(vertx);
-        this.routeurService = new CrnaRouterService(httpClientService, demandeService, mongoService, vertx);
+        this.jiraService = new DefaultJiraServiceImpl(vertx, config);
+        this.glpiService = new GlpiService(httpClientService);
+        this.routeurService = new CrnaRouterService(httpClientService, demandeService, jiraService, glpiService, mongoService, vertx);
     }
 
     public DemandeService getDemandeService() { return demandeService; }

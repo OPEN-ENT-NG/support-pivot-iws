@@ -5,11 +5,14 @@ import fr.openent.supportpivot.managers.ConfigManager;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 public class LoginTool {
+    private static final Logger log = LoggerFactory.getLogger(LoginTool.class);
 
     public static void getGlpiSessionToken(PivotHttpClient httpClient, Handler<AsyncResult<String>> handler) {
         try {
@@ -25,12 +28,12 @@ public class LoginTool {
             sendingRequest.startRequest(result -> {
                 if (result.succeeded()) {
                     result.result().bodyHandler(body -> {
-//                        handler.handle(Future.succeededFuture(body.toJsonObject().getValue("session").toString()));
                         Document xml = ParserTool.getParsedXml(body);
                         NodeList nodeList = xml.getElementsByTagName("member");
                         if (nodeList.getLength() < 5) {
-                            //TODO ajouter un log : url, xmldata
-                            handler.handle(Future.failedFuture("Support Pivot GLPI - login failed"));
+                            String message = "Support Pivot GLPI - login failed: " + ParserTool.getStringFromDocument(xml);
+                            log.error(message);
+                            handler.handle(Future.failedFuture(message));
                         }
                         Element session = (Element) nodeList.item(4);
 
