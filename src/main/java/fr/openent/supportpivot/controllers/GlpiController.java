@@ -39,8 +39,8 @@ public class GlpiController extends ControllerHelper {
 
     }
 
-    @Get("/glpi/test/trigger")
-    @fr.wseduc.security.SecuredAction("glpi.test.trigger")
+    @Get("/glpi/manual_trigger")
+//    @fr.wseduc.security.SecuredAction("glpi.test.trigger")
     public void testTrigger(final HttpServerRequest request) {
         routerService.triggerTicket(Endpoint.ENDPOINT_GLPI, new JsonObject(), event -> {
             if (event.succeeded()) {

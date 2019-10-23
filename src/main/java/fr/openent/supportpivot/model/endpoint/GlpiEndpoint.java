@@ -128,52 +128,6 @@ class GlpiEndpoint implements Endpoint {
         });
     }
 
-    /**
-     * Thanks the  xmlResult of a request, get a new token from GLPI if needed.
-     * Then the handler return if the token has not been reloaded
-     * and if it has been, the request, the request must be rerun
-     *
-     * @param xmlResult From the current sent request
-     * @param handler   return if the token has not been reloaded or otherwise, the request must be rerun
-     */
-    private void noReloginCheck(Document xmlResult, Handler<AsyncResult<Boolean>> handler) {
-        if (this.loginCheckCounter == 3) {
-            handler.handle(Future.failedFuture("Login maximum attempt reached"));
-            return;
-        }
-
-        NodeList nodeList = xmlResult.getElementsByTagName("member");
-        for (int i = 0; i < nodeList.getLength(); i++) {
-            Element session = (Element) nodeList.item(i);
-            String fieldName = session.getElementsByTagName("name").item(0).getTextContent();
-            if (fieldName.equals(GlpiConstants.ERROR_CODE_NAME)) {
-                String fieldValue = session.getElementsByTagName("value").item(0).getTextContent().trim();
-                if (fieldValue.equals(GlpiConstants.ERROR_LOGIN_CODE)) {
-                    this.loginCheckCounter++;
-                    LoginTool.getGlpiSessionToken(this.httpClient, result -> {
-                        if (result.succeeded()) {
-                            this.token = result.result().trim();
-                            this.loginCheckCounter = 0;
-                            handler.handle(Future.succeededFuture(false));
-                        } else {
-                            this.noReloginCheck(xmlResult, loginResult -> {
-                                if (loginResult.succeeded()) {
-                                    handler.handle(Future.succeededFuture(loginResult.result()));
-                                } else {
-                                    handler.handle(Future.failedFuture(loginResult.cause().getMessage()));
-                                }
-                            });
-                        }
-                    });
-                } else {
-                    handler.handle(Future.failedFuture("An error occurred at login to GLPI: " + xmlResult.toString()));
-                }
-                return;
-            }
-        }
-        handler.handle(Future.succeededFuture(true));
-    }
-
     private void updateGlpiTicket(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
         log.info("TODO: add update process");
     }
