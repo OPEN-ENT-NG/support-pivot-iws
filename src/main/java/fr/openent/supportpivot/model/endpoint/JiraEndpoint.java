@@ -4,7 +4,6 @@ import fr.openent.supportpivot.constants.JiraConstants;
 import fr.openent.supportpivot.constants.PivotConstants;
 import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
 import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
-import fr.openent.supportpivot.helpers.ParserTool;
 import fr.openent.supportpivot.helpers.PivotHttpClient;
 import fr.openent.supportpivot.helpers.PivotHttpClientRequest;
 import fr.openent.supportpivot.managers.ConfigManager;

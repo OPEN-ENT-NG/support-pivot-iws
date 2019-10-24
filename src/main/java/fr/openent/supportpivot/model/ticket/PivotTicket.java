@@ -10,9 +10,6 @@ import java.util.Date;
 
 public class PivotTicket implements Ticket {
 
-    private JsonArray comments = new JsonArray();
-    private JsonArray pjs = new JsonArray();
-
     private JsonObject jsonTicket = new JsonObject();
     private SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -23,13 +20,13 @@ public class PivotTicket implements Ticket {
 
     private void initComments() {
         if (this.getComments() == null) {
-            this.jsonTicket.put(PivotConstants.COMM_FIELD, this.comments);
+            this.jsonTicket.put(PivotConstants.COMM_FIELD, new JsonArray());
         }
     }
 
     private void initPjs() {
         if (this.getPjs() == null) {
-            this.jsonTicket.put(PivotConstants.ATTACHMENT_FIELD, this.pjs);
+            this.jsonTicket.put(PivotConstants.ATTACHMENT_FIELD, new JsonArray());
         }
     }
 
@@ -97,13 +94,12 @@ public class PivotTicket implements Ticket {
 
     @Override
     public JsonArray getComments() {
-        return jsonTicket.getJsonArray(PivotConstants.COMM_FIELD);
+        return this.jsonTicket.getJsonArray(PivotConstants.COMM_FIELD);
     }
 
     @Override
-    public JsonArray getPjs() {
-        return jsonTicket.getJsonArray(PivotConstants.ATTACHMENT_FIELD);
-    }
+    public JsonArray getPjs() { return this.jsonTicket.getJsonArray(PivotConstants.ATTACHMENT_FIELD); }
+
     /*#### DATES ####*/
 
     public String getCreatedAt() {
@@ -227,19 +223,15 @@ public class PivotTicket implements Ticket {
         jsonTicket.put(PivotConstants.IDIWS_FIELD, id.trim());
     }
 
-    public void setComments(JsonArray comments) {
-        this.comments = comments;
-    }
+    public void setComments(JsonArray comments) {this.jsonTicket.put(PivotConstants.COMM_FIELD, comments);}
 
-    public void setPjs(JsonArray pjs) {
-        this.pjs = pjs;
-    }
+    public void setPjs(JsonArray pjs) { this.jsonTicket.put(PivotConstants.ATTACHMENT_FIELD, pjs); }
 
     public void addComment(JsonObject comment) {
-        this.comments.add(comment);
+        this.getComments().add(comment);
     }
 
     public void addPj(JsonObject pj) {
-        this.pjs.add(pj);
+        this.getPjs().add(pj);
     }
 }
