@@ -166,8 +166,8 @@ public class PivotTicket implements Ticket {
         jsonTicket.put(PivotConstants.DATE_CREA_FIELD, date);
     }
 
-    public void setAttributed() {
-        jsonTicket.put(PivotConstants.ATTRIBUTION_FIELD, PivotConstants.ATTRIBUTION_NAME);
+    public void setAttributed(String attribution) {
+        jsonTicket.put(PivotConstants.ATTRIBUTION_FIELD, attribution);
     }
 
     public void setStatus(String status, String attributedName) {

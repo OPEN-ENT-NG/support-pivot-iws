@@ -38,8 +38,12 @@ class GlpiEndpoint implements Endpoint {
     }
 
     @Override
+    /**
+     * Gathering tickets from GLPI into Pivot format.
+     * Then router can dispatch them to appropriated endpoints
+     */
     public void trigger(JsonObject data, Handler<AsyncResult<List<PivotTicket>>> handler) {
-        //recupere les tickets avec toutes les infos
+
         sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCListTicketsQuery(), result -> {
             if (result.succeeded()) {
                 Document glpiTickets = result.result();
@@ -84,6 +88,7 @@ class GlpiEndpoint implements Endpoint {
     }
 
     private void createGlpiTicket(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
+        completeDescription(ticket);
         Document createTicketQuery = GlpiEndpointHelper.generateXMLRPCCreateTicketQuery(ticket);
         glpiService.sendRequest("POST", ConfigManager.getInstance().getGlpiRootUri(), createTicketQuery, result -> {
             if (result.succeeded()) {
@@ -92,36 +97,26 @@ class GlpiEndpoint implements Endpoint {
 
                     String id = handlerId.result().trim();
 
-                    // warn ENT ticket was created in GLPI
                     ticket.setGlpiId(id);
                     ticket.setIwsId(id);
-                    handler.handle(Future.succeededFuture(ticket));
+                    handler.handle(Future.succeededFuture(ticket));  // warn ENT ticket was created in GLPI even if comment or PJ are KO
 
                     // threat comments and attachments
-                    Document xmlCommentTicket = generateXMLRPCFirstCommentQuery(id, ticket);
+                    ticket.getComments().forEach(comment -> {
+                        sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCAddCommentQuery(id, (String) comment), handlerComment -> {
+                            if (handlerComment.failed()) {
+                                log.warn("Error adding comment to GLPI on ticket " + id + " " + comment, handlerComment.cause());
+                            }
+                        });
 
-                    sendQueryToGlpi(xmlCommentTicket, handlerFirstComment -> {
-                        if (handlerFirstComment.succeeded()) {
+                    ticket.getPjs().forEach(pj -> {
+                        sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCAddAttachmentsQuery(id, (JsonObject) pj), handlerPj -> {
+                            if (handlerPj.failed()) {
+                                log.warn("Error adding attachment to GLPI on ticket " + id + " attachment " + ((JsonObject) pj).getString(GlpiConstants.ATTACHMENT_NAME_FIELD), handlerPj.cause());
+                            }
+                        });
+                    });
 
-                            ticket.getComments().forEach(comment -> {
-                                sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCAddCommentQuery(id, (String) comment), handlerComment -> {
-                                    if (handlerComment.failed()) {
-                                        handler.handle(Future.failedFuture(handlerComment.cause().getMessage()));
-                                    }
-                                });
-                            });
-
-                            ticket.getPjs().forEach(pj -> {
-                                sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCAddAttachmentsQuery(id, (JsonObject) pj), handlerPj -> {
-                                    if (handlerPj.failed()) {
-                                        handler.handle(Future.failedFuture(handlerPj.cause().getMessage()));
-                                    }
-                                });
-                            });
-
-                        } else {
-                            handler.handle(Future.failedFuture(handlerFirstComment.cause().getMessage()));
-                        }
                     });
                 });
             } else {
@@ -130,10 +125,12 @@ class GlpiEndpoint implements Endpoint {
         });
     }
 
-    private Document generateXMLRPCFirstCommentQuery(String Id, PivotTicket ticket) {
+    private void completeDescription(PivotTicket ticket) {
 
-        String content = "identifiant ticket ENT : " + ticket.getId()
-                + "\n date de creation: " + ticket.getCreatedAt();
+        String content = ticket.getContent();
+        content += "\n----------------------------------------------------------------------------";
+        content += "\n identifiant ticket ENT : " + ticket.getId();
+        content += "\n date de creation: " + ticket.getCreatedAt();
         if (ticket.getUsers() != null) {
             String[] demandeur = ticket.getUsers().split("\\|");
             if (demandeur.length == 5) {
@@ -145,7 +142,7 @@ class GlpiEndpoint implements Endpoint {
                 content += "\n Demandeur : " + ticket.getUsers();
             }
         }
-        return GlpiEndpointHelper.generateXMLRPCAddCommentQuery(Id, content);
+        ticket.setContent(content);
     }
 
     private void updateGlpiTicket(PivotTicket sourceTicket, Handler<AsyncResult<PivotTicket>> handler) {
@@ -153,26 +150,16 @@ class GlpiEndpoint implements Endpoint {
             if (result.succeeded()) {
                 Document glpiTicket = result.result();
 
-                List<Future> futures = new ArrayList<>();
+                gatheringNewAttachmentsToAddToGlpi(sourceTicket, glpiTicket);
 
-                gatheringNewAttachmentsToAddToGlpi(sourceTicket, glpiTicket, futures);
-
-                gatheringCommentsToAddToGlpi(sourceTicket, glpiTicket, futures);
-
-                CompositeFuture.join(futures).setHandler(event -> {
-                    if (event.succeeded()) {
-                        handler.handle(Future.succeededFuture(sourceTicket));
-                    } else {
-                        handler.handle(Future.failedFuture(event.cause().getMessage()));
-                    }
-                });
+                gatheringCommentsToAddToGlpi(sourceTicket, glpiTicket);
             } else {
                 handler.handle(Future.failedFuture("updateTicket (getTicket from glpi unsuccessful ) : " + result.cause().getMessage()));
             }
         });
     }
 
-    private void gatheringCommentsToAddToGlpi( PivotTicket sourceTicket, Document glpiTicket, List<Future> futures) {
+    private void gatheringCommentsToAddToGlpi( PivotTicket sourceTicket, Document glpiTicket) {
 
         if (sourceTicket.getComments().isEmpty()) return;
 
@@ -189,7 +176,6 @@ class GlpiEndpoint implements Endpoint {
                 }
             }
 
-            ArrayList<String> newCommentsFromENTToAddInGlpi = new ArrayList<>();
             sourceTicket.getComments().forEach(comment -> {
                 String[] comment_values = comment.toString().split("\\|");
                 if  ( comment_values.length != 4) {
@@ -200,69 +186,51 @@ class GlpiEndpoint implements Endpoint {
                 String idComment = comment_values[0];
 
                 if (!idComment.startsWith(PREFIX_GLPICOMMENTID)) {
-                    //on ignore les commentaires dont l'identifiant indique qu'il provient de glpi
+                    //ignore comment from glpi (id starts with "glpi_")
                     if (!glpiCommentsId.contains(idComment)) {
-                        newCommentsFromENTToAddInGlpi.add(comment.toString());
+                        sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCAddCommentQuery(sourceTicket.getGlpiId(), comment.toString()), handlerComment -> {
+                            if (handlerComment.failed()){
+                                log.error("Error when uploading to GLPI a comment  " + idComment  + " for ticket ent_id=" + sourceTicket.getId(), handlerComment.cause());
+                            }
+                        });
                     }
                 }
-            });
-
-
-
-            //TODO ici en faisant des futures les commentaires ne sont pas créés dans l'ordre
-            newCommentsFromENTToAddInGlpi.forEach(commentToAdd -> {
-                Future<Boolean> future = Future.future();
-                futures.add(future);
-                sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCAddCommentQuery(sourceTicket.getGlpiId(), commentToAdd), handlerComment -> {
-                    if (handlerComment.succeeded()) {
-                        future.complete();
-                    } else {
-                        future.fail(handlerComment.cause().getMessage());
-                    }
                 });
-            });
-            
+
         } catch (XPathExpressionException e) {
             log.warn("Error when  gathering Comments to add to glpi. Pjs are ignored.", e);
         }
 
     }
 
-    private void gatheringNewAttachmentsToAddToGlpi(PivotTicket sourceTicket, Document glpiTicket, List<Future> futures)  {
-        //Récupération des pj glpi
-        String attachments_xpath = "//methodResponse/params/param/value/struct/member[name='"+ GlpiConstants.ATTACHMENT_FIELD+"']/value";
+    private void gatheringNewAttachmentsToAddToGlpi(PivotTicket sourceTicket, Document glpiTicket) {
+
+        String attachments_xpath = "//methodResponse/params/param/value/struct/member[name='" + GlpiConstants.ATTACHMENT_FIELD + "']/value/array/data/value/struct/member[name='filename']/value/string";
+
         try {
-            Node attachments_Node = (Node) path.evaluate(attachments_xpath, glpiTicket, XPathConstants.NODE);
+
+            NodeList glpiAttachmentsNameNodes = (NodeList) path.evaluate(attachments_xpath, glpiTicket, XPathConstants.NODESET);
+            ArrayList<String> glpiAttachmentsName = new ArrayList<>();
+            for (int i = 0; i < glpiAttachmentsNameNodes.getLength(); i++) {
+                String attachmentName = glpiAttachmentsNameNodes.item(i).getFirstChild().getNodeValue();
+                glpiAttachmentsName.add(attachmentName);
+            }
+
+            sourceTicket.getPjs().forEach(attachment -> {
+                String attachmentName = ((JsonObject) attachment).getString("nom");
+                if (!glpiAttachmentsName.contains(attachmentName)) {
+
+                    sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCAddAttachmentsQuery(sourceTicket.getGlpiId(), (JsonObject) attachment), handlerComment -> {
+                        if (handlerComment.failed()) {
+                            log.error("Error when uploading to GLPI an attachment  " + attachmentName + " for ticket ent_id=" + sourceTicket.getId(), handlerComment.cause());
+                        }
+                    });
+                }
+            });
+
         } catch (XPathExpressionException e) {
-            log.warn("Error when  gathering Pj to add to glpi. Pjs are ignored.", e);
-            return;
+            log.warn("Error when  gathering attachments to add to glpi. attachments are ignored.", e);
         }
-
-
-
-                   /* if (ticket.getAttributed() != null) {
-                        Future<Boolean> attributed = Future.future();
-                        futures.add(attributed);
-                        sendTicketGlpi(xmlAttribute(ticket.getGlpiId(), ticket.getAttributed()), handlerAttribute -> {
-                            if (handlerAttribute.succeeded()) {
-                                attributed.complete();
-                            } else {
-                                attributed.fail(handlerAttribute.cause().getMessage());
-                            }
-                        });
-                    }
-                     */
-
-
-                       /*
-                    ticket.getPjs().forEach(pj -> {
-                        sendTicketGlpi(xmlPj(id, (JsonObject) pj), handlerPj -> {
-                            if (handlerPj.failed()) {
-                                handler.handle(Future.failedFuture(handlerPj.cause().getMessage()));
-                            }
-                        });
-                    });*/
-
     }
 
 
@@ -332,15 +300,19 @@ class GlpiEndpoint implements Endpoint {
                     XPathExpression expr = path.compile("//methodResponse/params/param/value/struct/member");
                     NodeList fields = (NodeList) expr.evaluate(resultTicket.result(), XPathConstants.NODESET);
 
-
+                    ArrayList<Future> futures = new ArrayList<>();
                     for (int j = 0; j < fields.getLength(); j++) {
+                        Future future = Future.future();
+                        futures.add(future);
+
                         String name = (String) path.compile("name").evaluate(fields.item(j), XPathConstants.STRING);
                         Node value = (Node) path.compile("value").evaluate(fields.item(j), XPathConstants.NODE);
-
-                        MapGlpiTicketFieldIntoPivotTicket(name, value, pivotTicket, id);
+                        MapGlpiTicketFieldIntoPivotTicket(name, value, pivotTicket, id, future);
                     }
 
-                    handler.handle(Future.succeededFuture(pivotTicket));
+                    CompositeFuture.join(futures).setHandler(event ->
+                        handler.handle(Future.succeededFuture(pivotTicket))
+                    );
 
                 } catch (XPathExpressionException e) {
                     handler.handle(Future.failedFuture(e.getMessage()));
@@ -351,8 +323,8 @@ class GlpiEndpoint implements Endpoint {
         });
     }
 
-    private void MapGlpiTicketFieldIntoPivotTicket(String name, Node value, PivotTicket pivotTicket, String ticketId) {
-        String stringValue = value.getTextContent();
+    private void MapGlpiTicketFieldIntoPivotTicket(String name, Node value, PivotTicket pivotTicket, String ticketId, Future future) {
+        String stringValue = value.getTextContent().trim();
         try {
             switch (name) {
                 case GlpiConstants.ID_FIELD:
@@ -369,57 +341,25 @@ class GlpiEndpoint implements Endpoint {
                     pivotTicket.setTitle(stringValue);
                     break;
                 case GlpiConstants.TICKETTYPE_FIELD:
-                    stringValue = mapGlpiTypeValueToPivot(stringValue);
-                    pivotTicket.setType(stringValue);
+                    pivotTicket.setType(mapGlpiTypeValueToPivot(stringValue));
                     break;
                 case GlpiConstants.STATUS_FIELD:
-                    stringValue = mapGlpiStatusValueToPivot(stringValue);
-                    pivotTicket.setStatus(stringValue, PivotConstants.ATTRIBUTION_GLPI);
+                    pivotTicket.setStatus(mapGlpiStatusValueToPivot(stringValue), PivotConstants.ATTRIBUTION_GLPI);
                     break;
                 case GlpiConstants.PRIORITY_FIELD:
-                    stringValue = mapGlpiPriorityValueToPivot(stringValue);
-                    pivotTicket.setPriority(stringValue);
+                    pivotTicket.setPriority(mapGlpiPriorityValueToPivot(stringValue));
                     break;
                 case GlpiConstants.MODULES_FIELD:
-                    stringValue = mapGlpiModuleValueToPivot(stringValue.trim());
-                    pivotTicket.setCategorie(stringValue);
+                    pivotTicket.setCategorie(mapGlpiModuleValueToPivot(stringValue));
                     break;
                 case GlpiConstants.DESCRIPTION_FIELD:
                     pivotTicket.setContent(stringValue);
                     break;
                 case GlpiConstants.USERS_FIELD:
-                    XPathExpression expr = path.compile("struct/member");
-                    NodeList userTypes = (NodeList) expr.evaluate(value, XPathConstants.NODESET);
-                    for (int i = 0; i < userTypes.getLength(); i++) {
-                        Node type = userTypes.item(i);
-                        NodeList nodeTypeName = (NodeList) path.compile("name").evaluate(type, XPathConstants.NODESET);
-                        String typeName = nodeTypeName.item(0).getTextContent();
-                        expr = path.compile("value/array/data/value/struct/member");
-                        NodeList userFields = (NodeList) expr.evaluate(type, XPathConstants.NODESET);
-                        for (int j = 0; j < userFields.getLength(); j++) {
-                            NodeList requesterFieldName = (NodeList) path.compile("name").evaluate(userFields.item(j), XPathConstants.NODESET);
-                            NodeList requesterFieldValue = (NodeList) path.compile("value").evaluate(userFields.item(j), XPathConstants.NODESET);
-
-                            if (requesterFieldName.item(0).getTextContent().equals(GlpiConstants.ATTRIBUTION_FIELD)) {
-                                switch (typeName) {
-                                    case GlpiConstants.REQUESTER_FIELD:
-                                        pivotTicket.setCreator(requesterFieldValue.item(0).getTextContent());
-                                        break;
-                                    case GlpiConstants.ASSIGN_FIELD:
-                                        if (requesterFieldValue.item(0).getTextContent().trim().equals(GlpiConstants.JIRA_ASSIGNED_VALUE)) {
-                                            pivotTicket.setAttributed();
-                                        }
-                                        break;
-                                }
-                            }
-                        }
-                    }
+                    convertUsersToPivotCreatorOrAttributed(value, pivotTicket);
                     break;
                 case GlpiConstants.COMM_FIELD:
                     pivotTicket.setComments(convertGlpiCommentsToPivotComments(value));
-                    break;
-                case GlpiConstants.ATTACHMENT_FIELD:
-                    addGlpiAttachmentsToPivot(value, pivotTicket, ticketId);
                     break;
                 case GlpiConstants.DATE_CREA_FIELD:
                     pivotTicket.setGlpiCreatedAt(stringValue);
@@ -430,17 +370,50 @@ class GlpiEndpoint implements Endpoint {
                 case GlpiConstants.DATE_RESO_FIELD:
                     pivotTicket.setGlpiSolvedAt(stringValue);
                     break;
+                case GlpiConstants.ATTACHMENT_FIELD:
+                    convertGlpiAttachmentsToPivotAttachments(value, pivotTicket, ticketId, future);
+                    return;  //exit here to wait result of future pass to treatment
                 default:
             }
         } catch (XPathException e) {
             log.info("Impossible to map field " + name + " for glpi ticket "  +  ticketId,e);
         }
+
+        future.complete();
+    }
+
+    private void convertUsersToPivotCreatorOrAttributed(Node value, PivotTicket pivotTicket) throws XPathExpressionException {
+        XPathExpression expr = path.compile("struct/member");
+        NodeList userTypes = (NodeList) expr.evaluate(value, XPathConstants.NODESET);
+        for (int i = 0; i < userTypes.getLength(); i++) {
+            Node type = userTypes.item(i);
+            NodeList nodeTypeName = (NodeList) path.compile("name").evaluate(type, XPathConstants.NODESET);
+            String typeName = nodeTypeName.item(0).getTextContent();
+            expr = path.compile("value/array/data/value/struct/member");
+            NodeList userFields = (NodeList) expr.evaluate(type, XPathConstants.NODESET);
+            for (int j = 0; j < userFields.getLength(); j++) {
+                NodeList requesterFieldName = (NodeList) path.compile("name").evaluate(userFields.item(j), XPathConstants.NODESET);
+                NodeList requesterFieldValue = (NodeList) path.compile("value").evaluate(userFields.item(j), XPathConstants.NODESET);
+
+                if (requesterFieldName.item(0).getTextContent().equals(GlpiConstants.ATTRIBUTION_FIELD)) {
+                    switch (typeName) {
+                        case GlpiConstants.REQUESTER_FIELD:
+                            pivotTicket.setCreator(requesterFieldValue.item(0).getTextContent());
+                            break;
+                        case GlpiConstants.ASSIGN_FIELD:
+                            pivotTicket.setAttributed(requesterFieldValue.item(0).getTextContent().trim());
+                            break;
+                    }
+                }
+            }
+        }
     }
 
 
-
     private String mapGlpiModuleValueToPivot(String pivotValue) {
-        /*if (GlpiConstants.MODULE_NAME.contains(pivotValue)) {
+        /*
+        TODO
+        if (GlpiConstants.MODULE_NAME.contains(pivotValue)) {
             return pivotValue;
         }
         return GlpiConstants.MODULE_OTHER;*/
@@ -503,15 +476,16 @@ class GlpiEndpoint implements Endpoint {
                 }
             }
 
-            if (comment.getString(PivotConstants.COMM_CONTENT_FIELD).matches("^.*\\|.*\\|.*\\|.*$")) {
-                listComments.add(comment.getString(PivotConstants.COMM_CONTENT_FIELD));
+            String commentContent = comment.getString(PivotConstants.COMM_CONTENT_FIELD);
+            if (commentContent.matches("(?s)^.*\\|.*\\|.*\\|.*$")) {
+                listComments.add(commentContent);
             }else{
                 String formattedComment = PREFIX_GLPICOMMENTID
 
                         + comment.getString(PivotConstants.COMM_GLPI_ID_FIELD) + "|"
                         +  comment.getString(PivotConstants.COMM_USER_NAME_FIELD) + "|"
-                        +   comment.getString(PivotConstants.DATE_CREAGLPI_FIELD) + "|"
-                        + comment.getString(PivotConstants.COMM_CONTENT_FIELD);
+                        +   comment.getString(PivotConstants.DATE_CREAGLPI_FIELD) + "|\n"
+                        + commentContent;
                 
                 listComments.add(formattedComment);
             }
@@ -520,89 +494,53 @@ class GlpiEndpoint implements Endpoint {
         return listComments;
     }
 
-
-    //TODO
-    private void addGlpiAttachmentsToPivot(Node attachments, PivotTicket pivotTicket, String ticketId) throws XPathExpressionException {
-        NodeList listAttachments = (NodeList) path.compile("array/data/value/struct").evaluate(attachments, XPathConstants.NODESET);
+    private void convertGlpiAttachmentsToPivotAttachments(Node attachments, PivotTicket pivotTicket, String ticketId, Future future) throws XPathExpressionException {
+        NodeList attachmentsNodes = (NodeList) path.compile("array/data/value/struct").evaluate(attachments, XPathConstants.NODESET);
         List<Future> futures = new ArrayList<>();
-        for (int i = 0; i < listAttachments.getLength(); i++) {
-            Future<Boolean> future = Future.future();
-            futures.add(future);
-            NodeList attachmentFields = (NodeList) path.compile("member").evaluate(listAttachments.item(i), XPathConstants.NODESET);
-            findFieldValue(attachmentFields, GlpiConstants.ATTACHMENT_ID_FIELD, resultId -> {
-                if (resultId.succeeded()) {
-                    if (!pluck(pivotTicket.getPjs(), PivotConstants.ATTACHMENT_GLPI_ID_FIELD).contains(resultId.result())) {
-                        sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCGetDocumentQuery(ticketId, resultId.result()), resultAttachment -> {
-                            if (resultAttachment.succeeded()) {
-                                try {
-                                    NodeList fields = (NodeList) path.compile("//methodResponse/params/param/value/struct/member")
-                                            .evaluate(resultAttachment.result(), XPathConstants.NODESET);
-                                    JsonObject attachment = new JsonObject();
-                                    for (int j = 0; j < fields.getLength(); j++) {
-                                        NodeList attributionNameField = (NodeList) path.compile("name").evaluate(fields.item(j), XPathConstants.NODESET);
-                                        NodeList attributionValueField = (NodeList) path.compile("value").evaluate(fields.item(j), XPathConstants.NODESET);
-                                        String contentValue = attributionValueField.item(0).getTextContent().trim();
-                                        switch (attributionNameField.item(0).getTextContent()) {
-                                            case GlpiConstants.ATTACHMENT_ID_FIELD:
-                                                attachment.put(PivotConstants.ATTACHMENT_GLPI_ID_FIELD, contentValue);
-                                                break;
-                                            case GlpiConstants.ATTACHMENT_NAME_FORM:
-                                                attachment.put(PivotConstants.ATTACHMENT_NAME_FIELD, contentValue);
-                                                break;
-                                            case GlpiConstants.ATTACHMENT_B64_FORM:
-                                                attachment.put(PivotConstants.ATTACHMENT_CONTENT_FIELD, contentValue);
-                                                break;
-                                            case GlpiConstants.ATTACHMENT_TYPE_FIELD:
-                                                attachment.put(PivotConstants.ATTACHMENT_TYPE_FIELD, contentValue);
-                                                break;
-                                        }
+
+            for (int i = 0; i < attachmentsNodes.getLength(); i++) {
+                NodeList attachmentFields = (NodeList) path.compile("member").evaluate(attachmentsNodes.item(i), XPathConstants.NODESET);
+                JsonObject pivotAttachment = new JsonObject();
+                for (int j = 0; j < attachmentFields.getLength(); j++) {
+
+                    Node attachmentFieldName = (Node) path.compile("name").evaluate(attachmentFields.item(j), XPathConstants.NODE);
+                    Node attchmentFieldValue = (Node) path.compile("value").evaluate(attachmentFields.item(j), XPathConstants.NODE);
+
+                    String contentValue = attchmentFieldValue.getTextContent().trim();
+                    switch (attachmentFieldName.getTextContent()) {
+                        case GlpiConstants.ATTACHMENT_NAME_FIELD:
+                            pivotAttachment.put(PivotConstants.ATTACHMENT_NAME_FIELD, contentValue);
+                            break;
+                        case GlpiConstants.ATTACHMENT_ID_FIELD:
+                            Future<Boolean> attachementFuture = Future.future();
+                            futures.add(attachementFuture);
+
+                            sendQueryToGlpi(GlpiEndpointHelper.generateXMLRPCGetDocumentQuery(ticketId, contentValue), resultAttachment -> {
+                                if (resultAttachment.succeeded()) {
+                                    try {
+                                        String base64Content = (String) path.compile("//methodResponse/params/param/value/struct/member[name='base64']/value/string")
+                                                .evaluate(resultAttachment.result(), XPathConstants.STRING);
+                                        pivotAttachment.put(PivotConstants.ATTACHMENT_CONTENT_FIELD, base64Content);
+                                    } catch (XPathException xpe) {
+                                        log.warn("Error when getting GLPI attachment " + contentValue + " for ticket " + ticketId , xpe);
                                     }
-                                    attachment.put(PivotConstants.ATTACHMENT_ENCODING_FIELD, PivotConstants.ATTACHMENT_ENCODING_BASE64);
-                                    pivotTicket.addPj(attachment);
-                                    future.complete(true);
-                                } catch (XPathExpressionException e) {
-                                    future.fail("An error occurred while parsing attachment: " + e.getMessage());
+                                }else {
+                                    log.warn("Error when getting GLPI attachment " + contentValue + " for ticket " + ticketId , resultAttachment.cause());
                                 }
-                            } else {
-                                future.fail("Error while getting attachment: " + resultAttachment.cause().getMessage());
-                            }
-                        });
-                    } else {
-                        future.complete(false);
+                                attachementFuture.complete();
+                            });
+                            break;
                     }
-                } else {
-                    future.fail(GlpiConstants.ATTACHMENT_ID_FIELD + " not found.");
                 }
-            });
-        }
+                pivotTicket.addPj(pivotAttachment);
+            }
+
         CompositeFuture.join(futures).setHandler(event -> {
             if (event.failed()) {
                 log.error("An error occured while getting attachments: " + event.cause().getMessage());
             }
+           future.complete();
         });
-    }
 
-    private ArrayList pluck(JsonArray array, String attribute) {
-        ArrayList result = new ArrayList();
-        array.forEach(item -> {
-            result.add(attribute);
-        });
-        return result;
-    }
-
-    private void findFieldValue(NodeList fields, String fieldName, Handler<AsyncResult<String>> handler) {
-        try {
-            for (int i = 0; i < fields.getLength(); i++) {
-                NodeList name = (NodeList) path.compile("name").evaluate(fields.item(i), XPathConstants.NODESET);
-                NodeList value = (NodeList) path.compile("value").evaluate(fields.item(i), XPathConstants.NODESET);
-                if (name.item(0).getTextContent().equals(fieldName)) {
-                    handler.handle(Future.succeededFuture(value.item(0).getTextContent().trim()));
-                    return;
-                }
-            }
-            handler.handle(Future.failedFuture("Field not found"));
-        } catch (XPathExpressionException e) {
-            handler.handle(Future.failedFuture(e.getMessage()));
-        }
     }
 }

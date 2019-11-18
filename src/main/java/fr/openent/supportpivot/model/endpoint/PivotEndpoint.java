@@ -45,34 +45,7 @@ class PivotEndpoint implements Endpoint {
 
     @Override
     public void send(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
-
-        String ticketId = ticket.getId();
-/*
-        List<Future> futures = new ArrayList<>();
-        if (ticketId == null || ticketId.isEmpty()) {
-            Future<Boolean> future = Future.future();
-            futures.add(future);
-            this.glpiService.getTicket(ticket.getGlpiId(), result -> {
-                if (result.succeeded()) {
-                    this.glpiService.getIdFromGlpiTicket(result.result(), resultId -> {
-                        if (result.succeeded()) {
-                            ticket.setId(resultId.result());
-                            future.complete();
-                        } else {
-                            future.fail("An error occurred while: " + PivotConstants.ID_FIELD + ". " + result.cause().getMessage());
-                        }
-                    });
-
-                } else {
-                    future.fail("Field mandatory: " + PivotConstants.ID_FIELD + ". " + result.cause().getMessage());
-                }
-            });
-            return;
-        }
-
-        CompositeFuture.all(futures).setHandler(event -> {
-            if (event.succeeded()) {
-       */         try {
+         try {
                     eventBus
                             .send(PivotConstants.BUS_SEND, new JsonObject()
                                             .put("action", "create")
@@ -89,10 +62,5 @@ class PivotEndpoint implements Endpoint {
                 } catch (Error e) {
                     handler.handle(Future.failedFuture(e.getMessage()));
                 }
-        /*    } else {
-                handler.handle(Future.failedFuture(event.cause().getCause()));
-            }
-        });
-         */
     }
 }

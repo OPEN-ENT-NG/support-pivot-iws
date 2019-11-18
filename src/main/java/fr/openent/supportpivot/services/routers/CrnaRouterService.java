@@ -2,6 +2,7 @@ package fr.openent.supportpivot.services.routers;
 
 import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
 import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
+import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.model.endpoint.Endpoint;
 import fr.openent.supportpivot.model.endpoint.EndpointFactory;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
@@ -56,22 +57,31 @@ public class CrnaRouterService implements RouterService {
                 break;
             case Endpoint.ENDPOINT_GLPI:
                 Future jiraFuture = Future.future();
-                jiraEndpoint.send(ticket, result -> {
-                    if (result.succeeded()) {
-                        jiraFuture.complete(result.result());
-                    } else {
-                        jiraFuture.fail("sending ticket from GLPI to JIRA failed: " + result.cause().getMessage());
-                    }
-                });
+                if(ticket.getAttributed()!=null && ticket.getAttributed().equals(ConfigManager.getInstance().getGlpiSupportCGIUsername())) {
+                    jiraEndpoint.send(ticket, result -> {
+                        if (result.succeeded()) {
+                            jiraFuture.complete(result.result());
+                        } else {
+                            jiraFuture.fail("sending ticket from GLPI to JIRA failed: " + result.cause().getMessage());
+                        }
+                    });
+                }else{
+                    jiraFuture.complete();
+                }
 
                 Future entFuture = Future.future();
-                pivotEndpoint.send(ticket, result -> {
-                    if (result.succeeded()) {
-                        entFuture.complete(result.result());
-                    } else {
-                        entFuture.fail("sending ticket from GLPI to ENT failed: " + result.cause().getMessage());
-                    }
-                });
+                if(ticket.getId()!=null) {
+                    pivotEndpoint.send(ticket, result -> {
+                        if (result.succeeded()) {
+                            entFuture.complete(result.result());
+                        } else {
+                            entFuture.fail("sending ticket from GLPI to ENT failed: " + result.cause().getMessage());
+                        }
+                    });
+                }else{
+                    entFuture.complete();
+                }
+
                 CompositeFuture.all(jiraFuture, entFuture).setHandler(event -> {
                     if (event.succeeded()) {
                         log.info("ticket id_glpi: " + ticket.getGlpiId() + " scaled");

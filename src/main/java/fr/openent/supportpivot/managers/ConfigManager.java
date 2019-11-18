@@ -4,7 +4,6 @@ import fr.openent.supportpivot.Supportpivot;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
-import org.entcore.common.http.BaseServer;
 
 public class ConfigManager {
 
@@ -27,43 +26,55 @@ public class ConfigManager {
     private final String jiraLogin;
     private final String jiraPassword;
     private final JsonObject customFields;
+    private final String glpiSupportCGIUsername;
 
     private static final Logger log = LoggerFactory.getLogger(Supportpivot.class);
 
 
     private ConfigManager() {
 
-        this.defaultCollectivity = config.getString("collectivity", "CRNA");
-        // Keep default value for backward compatibility
+        this.defaultCollectivity = config.getString("collectivity");
+        if(defaultCollectivity.isEmpty()) {
+            log.warn("Default collectivity absent from configuration");
+        }
         this.mongoCollection = config.getString("mongo-collection", "support.demandes");
         this.proxyHost = config.getString("proxy-host", null);
         this.proxyPort = config.getInteger("proxy-port");
 
+        //GLPI Configuration
         JsonObject configGlpi = config.getJsonObject("glpi");
-        this.glpiHost = configGlpi.getString("host");
-        this.glpiRootUri = configGlpi.getString("root-uri");
+        if(configGlpi != null){
+            this.glpiHost = configGlpi.getString("host");
+            this.glpiRootUri = configGlpi.getString("root-uri");
+            this.glpiLogin = configGlpi.getString("login");
+            this.glpiPassword = configGlpi.getString("password");
+            this.glpiSupportCGIUsername = configGlpi.getString("supportcgi_username");
+            //this.glpiCategory = this.toHashMapCategories(configGlpi.getString("mapping.category"));
+            JsonObject glpiMappingConf = configGlpi.getJsonObject("mapping");
+            this.glpiCategory = glpiMappingConf.getString("default_category");
+            this.glpiType = glpiMappingConf.getString("default_type");
+            this.glpiLocation = glpiMappingConf.getJsonObject("location");
+        } else {
+            this.glpiHost = null;
+            this.glpiRootUri = null;
+            this.glpiLogin = null;
+            this.glpiPassword = null;
+            this.glpiSupportCGIUsername = null;
+            this.glpiCategory = null;
+            this.glpiType = null;
+            this.glpiLocation = null;
+        }
 
-        this.glpiLogin = configGlpi.getString("login");
-        this.glpiPassword = configGlpi.getString("password");
 
-        //this.glpiCategory = this.toHashMapCategories(configGlpi.getString("mapping.category"));
 
-        JsonObject glpiMappingConf = configGlpi.getJsonObject("mapping");
-        this.glpiCategory = glpiMappingConf.getString("default_category");
-        this.glpiType = glpiMappingConf.getString("default_type");
-        this.glpiLocation = glpiMappingConf.getJsonObject("location");
-
+        //JIRA configuration
         this.jiraHost = config.getString("jira-host");
         this.jiraBaseUri = config.getString("jira-base-uri");
         this.jiraProjectKey = config.getString("jira-project-key");
         this.jiraLogin = config.getString("jira-login");
         this.jiraPassword = config.getString("jira-passwd");
-
         this.customFields = config.getJsonObject("jira-custom-fields");
 
-        if(defaultCollectivity.isEmpty()) {
-            log.warn("Default collectivity absent from configuration");
-        }
     }
 
 
@@ -80,6 +91,7 @@ public class ConfigManager {
     public String getGlpiCategory() { return glpiCategory; }
     public String getGlpiType() { return glpiType; }
     public JsonObject getGlpiLocation() { return glpiLocation; }
+    public String getGlpiSupportCGIUsername() { return glpiSupportCGIUsername; }
 
     public String getJiraHost() { return jiraHost; }
     public String getJiraBaseUri() { return jiraBaseUri; }

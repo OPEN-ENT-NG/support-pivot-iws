@@ -51,16 +51,6 @@ public class GlpiConstants {
     public final static String ATTACHMENT_B64_FORM = "base64";
 
 
-//    public final static String GLPI_GET_TYPE_NAME = "type_name";
-
-    public final static String HOST_URL = "http://194.199.35.14:8080";
-    public final static String ROOT_URI = "/glpi/plugins/webservices/xmlrpc.php";
-
-    public final static String JIRA_ASSIGNED_VALUE = "Support ENT";
-    public static final String ASSIGNED_FORM = "user";
-
-    public final static String NOT_AUTHENTICATED_CODE = "13";
-
     /**
      * Mandatory fields
      */
