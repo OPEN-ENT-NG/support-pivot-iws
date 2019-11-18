@@ -70,7 +70,7 @@ class JiraEndpoint extends BaseServer implements Endpoint {
 
     @Override
     public void send(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
-        if (ticket.getGlpiId() != null && ticket.getAttributed() != null && ticket.getAttributed().equals(PivotConstants.ATTRIBUTION_NAME)) {
+        if (ticket.getGlpiId() != null && ticket.getAttributed() != null /*&& ticket.getAttributed().equals(PivotConstants.ATTRIBUTION_NAME)*/) {
             this.getJiraTicket(ticket.getGlpiId(), result -> {
                 if (result.succeeded()) {
                     HttpClientResponse response = result.result();

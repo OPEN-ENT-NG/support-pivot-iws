@@ -111,7 +111,7 @@ public class CrnaRouterService implements RouterService {
                 if (result.succeeded()) {
                     this.dispatchTicket(source, result.result(), dispatchHandler -> {
                         if (dispatchHandler.failed()) {
-                            String message = "Dispatch ticket failed" + dispatchHandler.cause().getMessage();
+                            String message = "Dispatch ticket failed " + dispatchHandler.cause().getMessage();
                             log.error(message);
                             handler.handle(Future.failedFuture(message));
                         } else {
@@ -175,7 +175,7 @@ public class CrnaRouterService implements RouterService {
                         }
                     });
                 } else {
-                    handler.handle(Future.failedFuture("ticket creation failed: " + result.cause().getMessage()));
+                    handler.handle(Future.failedFuture("tickets gathering failed: " + result.cause().getMessage()));
                 }
             });
         } else {

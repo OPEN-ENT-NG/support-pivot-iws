@@ -47,7 +47,7 @@ class PivotEndpoint implements Endpoint {
     public void send(PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
 
         String ticketId = ticket.getId();
-
+/*
         List<Future> futures = new ArrayList<>();
         if (ticketId == null || ticketId.isEmpty()) {
             Future<Boolean> future = Future.future();
@@ -72,7 +72,7 @@ class PivotEndpoint implements Endpoint {
 
         CompositeFuture.all(futures).setHandler(event -> {
             if (event.succeeded()) {
-                try {
+       */         try {
                     eventBus
                             .send(PivotConstants.BUS_SEND, new JsonObject()
                                             .put("action", "create")
@@ -89,9 +89,10 @@ class PivotEndpoint implements Endpoint {
                 } catch (Error e) {
                     handler.handle(Future.failedFuture(e.getMessage()));
                 }
-            } else {
+        /*    } else {
                 handler.handle(Future.failedFuture(event.cause().getCause()));
             }
         });
+         */
     }
 }

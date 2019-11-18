@@ -165,6 +165,8 @@ public class PivotConstants {
     public static final String COMM_GLPI_ID_FIELD = "id_glpi";
     public static final String COMM_USER_NAME_FIELD = "user_name";
     public static final String COMM_CONTENT_FIELD = "content";
+    public static final String COMM_DATE_FIELD = "date";
+
 
     /**
      * Encode a string in UTF-8

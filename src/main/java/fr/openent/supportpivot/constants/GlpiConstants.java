@@ -169,8 +169,10 @@ public class GlpiConstants {
     public final static String REQUESTER_CREATE = "requester";
     public final static String TYPE_CREATE = "type";
     public final static String CATEGORY_CREATE = "category";
-    public final static String ID_JIRA_CREATE = "numgira";
+    public final static String ID_JIRA_CREATE = "numjira";
     public final static String ID_ENT_CREATE = "nument";
+    public final static String ID_ENT_CREATE_RESPONSE = "numero_ent";
+    public final static String ID_JIRA_CREATE_RESPONSE = "numero_jira";
 
     public final static String ENTITY_ID = "342";
     public final static String REQUESTER_ID = "42";

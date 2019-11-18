@@ -46,12 +46,19 @@ public class GlpiController extends ControllerHelper {
             if (event.succeeded()) {
                 Renders.renderJson(request, new JsonObject().put("status", "OK"), 200);
             } else {
-                Renders.renderJson(request, new JsonObject().put("status", "KO"), 500);
+                Renders.renderJson(request, new JsonObject().put("status", "KO").put("error",event.cause().getMessage()), 500);
             }
         });
     }
 
     @BusAddress("supportpivot.glpi.trigger")
     public void glpiTrigger(Message<JsonObject> message) {
+        routerService.triggerTicket(Endpoint.ENDPOINT_GLPI, new JsonObject(), event -> {
+            if (event.succeeded()) {
+                message.isSend();
+            } else {
+                message.fail(-1,event.cause().getMessage());
+            }
+        });
     }
 }

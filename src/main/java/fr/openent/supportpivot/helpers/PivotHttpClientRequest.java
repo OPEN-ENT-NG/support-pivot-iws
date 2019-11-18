@@ -1,6 +1,5 @@
 package fr.openent.supportpivot.helpers;
 
-import fr.openent.supportpivot.Middleware.Middleware;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -16,17 +15,11 @@ public class PivotHttpClientRequest {
     private HttpClientRequest httpClientRequest;
     private String basicAuth = "";
     private String data = "";
-    private List<Middleware> middlewares = new ArrayList<>();
 
     private static Base64.Encoder encoder = Base64.getMimeEncoder().withoutPadding();
 
     PivotHttpClientRequest(HttpClientRequest httpClientRequest) {
         this.httpClientRequest = httpClientRequest;
-    }
-
-    PivotHttpClientRequest(HttpClientRequest httpClientRequest, List<Middleware> middlewares) {
-        this.httpClientRequest = httpClientRequest;
-        this.middlewares = middlewares;
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -37,9 +30,6 @@ public class PivotHttpClientRequest {
 
     @SuppressWarnings("unused")
     public void startRequest(Handler<AsyncResult<HttpClientResponse>> handler) {
-        for (Middleware middleware : this.middlewares) {
-            middleware.handle(httpClientRequest);
-        }
 
         httpClientRequest.handler(response -> handler.handle(Future.succeededFuture(response)));
         httpClientRequest.exceptionHandler(response -> handler.handle(Future.failedFuture(response.toString())));
