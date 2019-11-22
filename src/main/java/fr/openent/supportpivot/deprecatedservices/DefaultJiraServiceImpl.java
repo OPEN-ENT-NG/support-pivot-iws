@@ -107,11 +107,12 @@ public class DefaultJiraServiceImpl implements JiraService {
         this.ACADEMY_NAME = config.getString("academy");
         JIRA_FIELD = config.getJsonObject("jira-custom-fields");
 
-        //Retro-compatibility external fields are historical labeled iws
-        JIRA_FIELD.put("id_iws" , JIRA_FIELD.getString("id_external"));
-        JIRA_FIELD.put("status_iws" , JIRA_FIELD.getString("status_external"));
-        JIRA_FIELD.put("resolution_iws" , JIRA_FIELD.getString("resolution_external"));
-
+        if(JIRA_FIELD.containsKey("id_external")) {
+            //Retro-compatibility external fields are historical labeled iws
+            JIRA_FIELD.put("id_iws", JIRA_FIELD.getString("id_external"));
+            JIRA_FIELD.put("status_iws", JIRA_FIELD.getString("status_external"));
+            JIRA_FIELD.put("resolution_iws", JIRA_FIELD.getString("resolution_external"));
+        }
         JIRA_STATUS_MAPPING = config.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
         JIRA_STATUS_DEFAULT = config.getJsonObject("jira-status-mapping").getString("statutsDefault");
         JIRA_ALLOWED_TICKETTYPE = config.getJsonArray("jira-allowed-tickettype");
