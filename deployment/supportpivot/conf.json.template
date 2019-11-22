@@ -7,8 +7,10 @@
     	"app-address" : "/supportpivot",
     	"app-icon" : "Supportpivot-large",
         "host": "${host}",
+    <% if (supportPivotProxyHost != null && !supportPivotProxyHost.trim().isEmpty()) { %>
         "proxy-host": "${supportPivotProxyHost}",
         "proxy-port": ${supportPivotProxyPort},
+    <% } %>
         "ssl" : $ssl,
         "auto-redeploy": false,
         "userbook-host": "${host}",
@@ -21,7 +23,29 @@
 		"default-attribution" : "${supportPivotDefAttribution}",
 		"default-tickettype" : "${supportPivotDefTicketType}",
 		"default-priority" : "${supportPivotDefTicketPriority}",
+    <% if (supportPivotExternalTools != null && "IWS".equals(supportPivotExternalTools)) { %>
+        "iws-endpoint" : {
+            "mail-iws" : "${supportPivotIWSMail}"
+        },
         "mail-iws" : "${supportPivotIWSMail}",
+    <% } %>
+    <% if (supportPivotExternalTools != null && "GLPI".equals(supportPivotExternalTools)) { %>
+        "glpi-endpoint": {
+            "host": "${supportPivotGlpiHost}",
+            "root-uri": "${supportPivotGlpiRootUri}",
+            "login": "${supportPivotGlpiLogin}",
+            "password": "${supportPivotGlpiPassword}",
+            "supportcgi_username": "${supportPivotGlpiUsername}",
+            "mapping": {
+                "category": ${supportPivotGlpiCategoryMapping},
+                "default_category": "${supportPivotGlpiDefaultCategory}",
+                "type": ${supportPivotGlpiTypeMapping},
+                "default_type": "${supportPivotGlpiDefaultType}",
+                "location": ${supportPivotGlpiLocationMapping}
+            },
+            "synchro-cron" : "${supportPivotGlpiSynchroCron}"
+        },
+    <% } %>
         "jira-login" : "${supportPivotJIRALogin}",
         "jira-passwd" : "${supportPivotJIRAPwd}",
         "jira-host" : "${supportPivotJIRAHost}",
@@ -39,25 +63,11 @@
             "resolution_ent" : "${supportPivotCFResEnt}",
             "resolution_iws" : "${supportPivotCFResIws}",
             "creator" : "${supportPivotCFCreator}",
-            "response_technical" : "${supportPivotCFTechResp}",
-             "id_glpi" : "${supportPivotCFIdGlpi}"
+            "response_technical" : "${supportPivotCFTechResp}"
         },
     	"jira-status-mapping": {
     		"statutsJira": ${supportPivotMappingStatus},
     		"statutsDefault" : "${supportPivotDefaultStatus}"
-    	},
-    	"glpi": {
-    	    "host": "${supportPivotGlpiHost}",
-    	    "root-uri": "${supportPivotGlpiRootUri}",
-    	    "login": "${supportPivotGlpiLogin}",
-    	    "password": "${supportPivotGlpiPassword}",
-    	    "mapping": {
-    	        "category": ${supportPivotGlpiCategoryMapping},
-    	        "default_category": "${supportPivotGlpiDefaultCategory}",
-    	        "type": ${supportPivotGlpiTypeMapping},
-    	        "default_type": "${supportPivotGlpiDefaultType}",
-    	        "location": ${supportPivotGlpiLocationMapping}
-    	    }
     	}
       }
     }
