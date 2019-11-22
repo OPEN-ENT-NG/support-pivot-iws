@@ -34,7 +34,7 @@ public class GlpiController extends ControllerHelper {
                      Map<String, SecuredAction> securedActions) {
 
         super.init(vertx, config, rm, securedActions);
-        ServiceManager serviceManager = ServiceManager.init(vertx, config, eb);
+        ServiceManager serviceManager = ServiceManager.getInstance();
         this.routerService = serviceManager.getRouteurService();
 
     }

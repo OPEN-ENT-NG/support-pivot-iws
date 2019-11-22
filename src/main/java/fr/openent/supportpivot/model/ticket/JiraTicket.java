@@ -47,7 +47,7 @@ public class JiraTicket implements Ticket {
 
     @Override
     public String getCollectivity() {
-        return ConfigManager.getInstance().getDefaultCollectivity();
+        return ConfigManager.getInstance().getCollectivity();
     }
 
     @Override
@@ -96,11 +96,6 @@ public class JiraTicket implements Ticket {
     }
 
     @Override
-    public Date getUpdatedAt() throws ParseException {
-        return null;
-    }
-
-    @Override
     public Date getSolvedAt() throws ParseException {
         return null;
     }
@@ -132,14 +127,6 @@ public class JiraTicket implements Ticket {
 
     public void setContent(String content) {
         this.getField().put(JiraConstants.DESCRIPTION_FIELD, content);
-    }
-
-    public void setGlpiID(String glpiID) {
-        this.getField().put(ConfigManager.getInstance().getCustomFields().getString(JiraConstants.IDGLPI_FIELD), glpiID);
-    }
-
-    public void setEntID(String entID) {
-        this.getField().put(ConfigManager.getInstance().getCustomFields().getString(JiraConstants.IDENT_FIELD), entID);
     }
 
 }

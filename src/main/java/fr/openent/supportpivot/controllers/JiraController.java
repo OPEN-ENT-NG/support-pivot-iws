@@ -3,12 +3,10 @@ package fr.openent.supportpivot.controllers;
 import fr.openent.supportpivot.managers.ServiceManager;
 import fr.openent.supportpivot.model.endpoint.Endpoint;
 import fr.openent.supportpivot.services.RouterService;
-import fr.wseduc.bus.BusAddress;
 import fr.wseduc.rs.Get;
 import fr.wseduc.webutils.http.Renders;
 import fr.wseduc.webutils.security.SecuredAction;
 import io.vertx.core.Vertx;
-import io.vertx.core.eventbus.Message;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
@@ -34,7 +32,7 @@ public class JiraController extends ControllerHelper {
                      Map<String, SecuredAction> securedActions) {
 
         super.init(vertx, config, rm, securedActions);
-        ServiceManager serviceManager = ServiceManager.init(vertx, config, eb);
+        ServiceManager serviceManager = ServiceManager.getInstance();
         this.routerService = serviceManager.getRouteurService();
 
     }
@@ -52,7 +50,4 @@ public class JiraController extends ControllerHelper {
         });
     }
 
-    @BusAddress("supportpivot.glpi.trigger")
-    public void glpiTrigger(Message<JsonObject> message) {
-    }
 }

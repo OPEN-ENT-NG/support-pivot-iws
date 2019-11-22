@@ -2,14 +2,12 @@ package fr.openent.supportpivot.model.endpoint;
 
 import fr.openent.supportpivot.constants.PivotConstants;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
-import fr.openent.supportpivot.services.GlpiService;
 import io.vertx.core.*;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static fr.wseduc.webutils.Server.getEventBus;
@@ -19,13 +17,11 @@ import static fr.wseduc.webutils.Utils.handlerToAsyncHandler;
 class PivotEndpoint implements Endpoint {
 
     private EventBus eventBus;
-    private GlpiService glpiService;
 
     private static final Logger log = LoggerFactory.getLogger(PivotEndpoint.class);
 
-    PivotEndpoint(Vertx vertx, GlpiService glpiService) {
+    PivotEndpoint(Vertx vertx) {
         this.eventBus = getEventBus(vertx);
-        this.glpiService =  glpiService;
     }
 
     @Override
@@ -37,9 +33,6 @@ class PivotEndpoint implements Endpoint {
         final JsonObject issue = ticketData.getJsonObject("issue");
         PivotTicket ticket = new PivotTicket();
         ticket.setJsonObject(issue);
-        if (ticket.getIwsId() != null) {
-            ticket.setGlpiId(ticket.getIwsId().trim());
-        }
         handler.handle(Future.succeededFuture(ticket));
     }
 

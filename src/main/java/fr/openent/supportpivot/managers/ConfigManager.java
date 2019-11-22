@@ -5,11 +5,15 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+
 public class ConfigManager {
 
     private static JsonObject config;
 
-    private final String defaultCollectivity;
+    private final String collectivity;
     private final String mongoCollection;
     private final String proxyHost;
     private final Integer proxyPort;
@@ -25,60 +29,94 @@ public class ConfigManager {
     private final String jiraProjectKey;
     private final String jiraLogin;
     private final String jiraPassword;
+    private final String externalEndpointActivated;
+
+
     private final JsonObject customFields;
+    private final String jiraCustomFieldIdForExternalId;
+
     private final String glpiSupportCGIUsername;
 
     private static final Logger log = LoggerFactory.getLogger(Supportpivot.class);
+    private final String synchroCronDate;
 
 
     private ConfigManager() {
 
-        this.defaultCollectivity = config.getString("collectivity");
-        if(defaultCollectivity.isEmpty()) {
+        collectivity = config.getString("collectivity");
+        if(collectivity.isEmpty()) {
             log.warn("Default collectivity absent from configuration");
         }
-        this.mongoCollection = config.getString("mongo-collection", "support.demandes");
-        this.proxyHost = config.getString("proxy-host", null);
-        this.proxyPort = config.getInteger("proxy-port");
-
+        mongoCollection = config.getString("mongo-collection", "support.demandes");
+        proxyHost = config.getString("proxy-host", null);
+        proxyPort = config.getInteger("proxy-port");
         //GLPI Configuration
-        JsonObject configGlpi = config.getJsonObject("glpi");
+        JsonObject configGlpi = config.getJsonObject("glpi-endpoint");
         if(configGlpi != null){
-            this.glpiHost = configGlpi.getString("host");
-            this.glpiRootUri = configGlpi.getString("root-uri");
-            this.glpiLogin = configGlpi.getString("login");
-            this.glpiPassword = configGlpi.getString("password");
-            this.glpiSupportCGIUsername = configGlpi.getString("supportcgi_username");
-            //this.glpiCategory = this.toHashMapCategories(configGlpi.getString("mapping.category"));
+            externalEndpointActivated = "GLPI";
+            glpiHost = configGlpi.getString("host");
+            CheckUrlSyntax(glpiHost, "glpi-endpoint/host");
+            glpiRootUri = configGlpi.getString("root-uri");
+            glpiLogin = configGlpi.getString("login");
+            glpiPassword = configGlpi.getString("password");
+            glpiSupportCGIUsername = configGlpi.getString("supportcgi_username");
+            //glpiCategory = toHashMapCategories(configGlpi.getString("mapping.category"));
+            synchroCronDate = configGlpi.getString("synchro-cron");
+
             JsonObject glpiMappingConf = configGlpi.getJsonObject("mapping");
-            this.glpiCategory = glpiMappingConf.getString("default_category");
-            this.glpiType = glpiMappingConf.getString("default_type");
-            this.glpiLocation = glpiMappingConf.getJsonObject("location");
+            glpiCategory = glpiMappingConf.getString("default_category");
+            glpiType = glpiMappingConf.getString("default_type");
+            glpiLocation = glpiMappingConf.getJsonObject("location");
+
         } else {
-            this.glpiHost = null;
-            this.glpiRootUri = null;
-            this.glpiLogin = null;
-            this.glpiPassword = null;
-            this.glpiSupportCGIUsername = null;
-            this.glpiCategory = null;
-            this.glpiType = null;
-            this.glpiLocation = null;
+            glpiHost = null;
+            glpiRootUri = null;
+            glpiLogin = null;
+            glpiPassword = null;
+            glpiSupportCGIUsername = null;
+            glpiCategory = null;
+            glpiType = null;
+            glpiLocation = null;
+            synchroCronDate = null;
+            JsonObject configIws = config.getJsonObject("iws-endpoint");
+            if(configIws != null){
+                externalEndpointActivated = "IWS";
+            } else {
+                externalEndpointActivated = "NONE";
+            }
+
         }
+
 
 
 
         //JIRA configuration
-        this.jiraHost = config.getString("jira-host");
-        this.jiraBaseUri = config.getString("jira-base-uri");
-        this.jiraProjectKey = config.getString("jira-project-key");
-        this.jiraLogin = config.getString("jira-login");
-        this.jiraPassword = config.getString("jira-passwd");
-        this.customFields = config.getJsonObject("jira-custom-fields");
+        jiraHost = config.getString("jira-host").trim() ;
+        CheckUrlSyntax(jiraHost, "jira-host");
+        jiraBaseUri = config.getString("jira-base-uri");
+        jiraProjectKey = config.getString("jira-project-key");
+        jiraLogin = config.getString("jira-login");
+        jiraPassword = config.getString("jira-passwd");
+        customFields = config.getJsonObject("jira-custom-fields");
 
+        if(customFields.containsKey("id_external")) {
+            jiraCustomFieldIdForExternalId = customFields.getString("id_external");
+        }else{
+            //For retro-compatibility
+            jiraCustomFieldIdForExternalId = customFields.getString("id_iws");
+        }
+    }
+
+    private static void CheckUrlSyntax(String URLvalue, String parameterName) {
+        try {
+            new URL(URLvalue).toURI();
+        }catch (Exception e) {
+            log.error("entcore.json : parameter " + parameterName+" is not a valid URL",e);
+        }
     }
 
 
-    public String getDefaultCollectivity() { return defaultCollectivity; }
+    public String getCollectivity() { return collectivity; }
     public String getMongoCollection() { return mongoCollection; }
     public String getProxyHost() { return proxyHost; }
     public Integer getProxyPort() { return proxyPort; }
@@ -92,15 +130,26 @@ public class ConfigManager {
     public String getGlpiType() { return glpiType; }
     public JsonObject getGlpiLocation() { return glpiLocation; }
     public String getGlpiSupportCGIUsername() { return glpiSupportCGIUsername; }
+    public String getSynchroCronDate() { return synchroCronDate;   }
 
     public String getJiraHost() { return jiraHost; }
     public String getJiraBaseUri() { return jiraBaseUri; }
-    public String getJiraBaseUrl() { return jiraHost + jiraBaseUri; }
+    public URI getJiraBaseUrl() {
+        try {
+            return new URI(jiraHost).resolve(jiraBaseUri);
+        } catch (URISyntaxException e) {
+            log.fatal("bad URL jira-host / jira-base-uri :" +  jiraHost + " / " + jiraBaseUri);
+            return URI.create("");
+        }
+    }
     public String getJiraLogin() { return jiraLogin; }
     public String getJiraPassword() { return jiraPassword; }
     public String getJiraAuthInfo() { return jiraLogin + ":" + jiraPassword; }
     public String getJiraProjectKey() { return jiraProjectKey; }
     public JsonObject getCustomFields() { return customFields; }
+    public String getJiraCustomFieldIdForExternalId() { return jiraCustomFieldIdForExternalId; }
+    public String getExternalEndpointActivated() { return externalEndpointActivated; }
+
 
 
     /** Holder */
@@ -115,4 +164,6 @@ public class ConfigManager {
     public static ConfigManager getInstance() {
         return Holder.instance;
     }
+
+
 }

@@ -1,11 +1,8 @@
 package fr.openent.supportpivot.model.ticket;
 
-import fr.openent.supportpivot.Supportpivot;
 import fr.openent.supportpivot.managers.ConfigManager;
 import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 
-import java.text.ParseException;
 import java.util.Date;
 import java.util.LinkedList;
 
@@ -31,7 +28,7 @@ public class GlpiTicket implements Ticket{
 
     @Override
     public String getCollectivity(){
-        return ConfigManager.getInstance().getDefaultCollectivity();
+        return ConfigManager.getInstance().getCollectivity();
     }
 
     @Override
@@ -73,10 +70,6 @@ public class GlpiTicket implements Ticket{
         return null;
     }
 
-    @Override
-    public Date getUpdatedAt() { //TODO
-        return null;
-    }
 
     @Override
     public Date getSolvedAt() { //TODO

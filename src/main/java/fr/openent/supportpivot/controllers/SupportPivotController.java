@@ -62,7 +62,7 @@ public class SupportPivotController extends ControllerHelper{
                      Map<String, fr.wseduc.webutils.security.SecuredAction> securedActions) {
         super.init(vertx, config, rm, securedActions);
 
-        ServiceManager serviceManager = ServiceManager.init(vertx, config, eb);
+        ServiceManager serviceManager = ServiceManager.getInstance();
 
         this.demandeService = serviceManager.getDemandeService();
         this.mongoService = serviceManager.getMongoService();

@@ -40,6 +40,7 @@ import java.util.Date;
 import static fr.wseduc.webutils.Server.getEventBus;
 import static fr.wseduc.webutils.Utils.handlerToAsyncHandler;
 import static fr.openent.supportpivot.constants.PivotConstants.*;
+import static fr.openent.supportpivot.model.ticket.PivotTicket.*;
 
 /**
  * Created by colenot on 07/12/2017.
@@ -59,6 +60,24 @@ public class DefaultDemandeServiceImpl implements DemandeService {
     private final String TICKETTYPE_DEFAULT;
     private final String PRIORITY_DEFAULT;
 
+    /**
+     * Mandatory fields
+     */
+    public static final String[] IWS_MANDATORY_FIELDS = {
+            IDIWS_FIELD,
+            COLLECTIVITY_FIELD,
+            CREATOR_FIELD,
+            DESCRIPTION_FIELD,
+            ATTRIBUTION_FIELD
+    };
+
+    public static final String[] ENT_MANDATORY_FIELDS = {
+            ID_FIELD,
+            CREATOR_FIELD,
+            TITLE_FIELD,
+            DESCRIPTION_FIELD
+    };
+
     private final JiraService jiraService;
     private MongoService mongoService;
 
@@ -71,7 +90,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
 
         eb = getEventBus(vertx);
         this.MAIL_IWS = config.getString("mail-iws");
-        this.COLLECTIVITY_NAME = ConfigManager.getInstance().getDefaultCollectivity();
+        this.COLLECTIVITY_NAME = ConfigManager.getInstance().getCollectivity();
         this.ATTRIBUTION_DEFAULT = config.getString("default-attribution");
         this.TICKETTYPE_DEFAULT = config.getString("default-tickettype");
         this.PRIORITY_DEFAULT = config.getString("default-priority");

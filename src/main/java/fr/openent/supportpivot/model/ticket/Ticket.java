@@ -21,8 +21,6 @@ public interface Ticket {
 
     String getCreatedAt();
 
-    Date getUpdatedAt() throws ParseException;
-
     Date getSolvedAt() throws ParseException;
 
     String getAttributed();

@@ -45,6 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import static fr.openent.supportpivot.constants.PivotConstants.*;
+import static fr.openent.supportpivot.model.ticket.PivotTicket.*;
 
 /**
  * Created by mercierq on 09/02/2018.
@@ -105,6 +106,12 @@ public class DefaultJiraServiceImpl implements JiraService {
         this.JIRA_PROJECT_NAME = config.getString("jira-project-key");
         this.ACADEMY_NAME = config.getString("academy");
         JIRA_FIELD = config.getJsonObject("jira-custom-fields");
+
+        //Retro-compatibility external fields are historical labeled iws
+        JIRA_FIELD.put("id_iws" , JIRA_FIELD.getString("id_external"));
+        JIRA_FIELD.put("status_iws" , JIRA_FIELD.getString("status_external"));
+        JIRA_FIELD.put("resolution_iws" , JIRA_FIELD.getString("resolution_external"));
+
         JIRA_STATUS_MAPPING = config.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
         JIRA_STATUS_DEFAULT = config.getJsonObject("jira-status-mapping").getString("statutsDefault");
         JIRA_ALLOWED_TICKETTYPE = config.getJsonArray("jira-allowed-tickettype");
@@ -146,6 +153,10 @@ public class DefaultJiraServiceImpl implements JiraService {
         if (!httpClientRequest.headers().contains("Content-Type")) {
             httpClientRequest.putHeader("Content-Type", "application/json");
         }
+
+        httpClientRequest.exceptionHandler(exception->{
+            LOGGER.error("Error when update Jira ticket",exception );
+        });
         httpClientRequest.end();
     }
 
@@ -210,12 +221,12 @@ public class DefaultJiraServiceImpl implements JiraService {
                         .put("name", ticketType))
                 .put("labels", jsonPivotIn.getJsonArray(MODULES_FIELD))
                 .put(JIRA_FIELD.getString("id_ent"), jsonPivotIn.getString(ID_FIELD))
-                .put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDIWS_FIELD))
+                .put(JIRA_FIELD.getString("id_external"), jsonPivotIn.getString(IDIWS_FIELD))
                 .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD))
-                .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD))
+                .put(JIRA_FIELD.getString("status_external"), jsonPivotIn.getString(STATUSIWS_FIELD))
                 .put(JIRA_FIELD.getString("creation"), jsonPivotIn.getString(DATE_CREA_FIELD))
                 .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESO_FIELD))
-                .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
+                .put(JIRA_FIELD.getString("resolution_external"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
                 .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(CREATOR_FIELD))
                 .put("priority", new JsonObject()
                         .put("name", currentPriority)));
@@ -252,6 +263,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
             terminateRequest(createTicketRequest);
         } catch (Error e) {
+            LOGGER.error("Error when creating Jira ticket",e );
             handler.handle(new Either.Left<>("999;Error when creating Jira ticket: " + e.getMessage()));
         }
 
@@ -704,14 +716,15 @@ public class DefaultJiraServiceImpl implements JiraService {
         final URI urlGetTicketGeneralInfo = JIRA_REST_API_URI.resolve(jiraTicketId);
 
         HttpClientRequest httpClientRequestGetInfo = httpClient.get(urlGetTicketGeneralInfo.toString(), response -> {
-
+            response.exceptionHandler(exception -> LOGGER.error("Jira request error : ",exception));
             if (response.statusCode() == HTTP_STATUS_200_OK) {
                 response.bodyHandler(bufferGetInfosTicket -> {
                     JsonObject jsonGetInfosTicket = new JsonObject(bufferGetInfosTicket.toString());
                     convertJiraReponseToJsonPivot(jsonGetInfosTicket, handler);
                 });
             } else {
-                LOGGER.error("Error when calling URL : " + JIRA_HOST.resolve(urlGetTicketGeneralInfo) + ":" + response.statusMessage());
+                LOGGER.error("Error when calling URL : " + JIRA_HOST.resolve(urlGetTicketGeneralInfo) + ":" + response.statusCode() + " " + response.statusMessage());
+                response.bodyHandler(bufferGetInfosTicket -> LOGGER.error(bufferGetInfosTicket.toString()));
                 handler.handle(new Either.Left<>("Error when gathering Jira ticket information"));
             }
         });
@@ -736,7 +749,7 @@ public class DefaultJiraServiceImpl implements JiraService {
 
             jsonPivot.put(IDJIRA_FIELD, jiraTicket.getString("key"));
 
-            jsonPivot.put(COLLECTIVITY_FIELD, ConfigManager.getInstance().getDefaultCollectivity());
+            jsonPivot.put(COLLECTIVITY_FIELD, ConfigManager.getInstance().getCollectivity());
             jsonPivot.put(ACADEMY_FIELD, ACADEMY_NAME);
 
             if (fields.getString(JIRA_FIELD.getString("creator")) != null) {
@@ -951,9 +964,12 @@ public class DefaultJiraServiceImpl implements JiraService {
      */
     private boolean hasToSerialize(String content) {
         String[] elements = content.split(Pattern.quote("|"));
+        return elements.length != 4;
+        /* Fisrt field can have a different format in according to external tool plugged.
         if (elements.length < 4) return true;
         String id = elements[0].trim();
         return (!id.matches("[0-9]{14}"));
+        */
     }
 
     /**

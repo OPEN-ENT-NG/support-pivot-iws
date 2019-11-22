@@ -1,6 +1,5 @@
 package fr.openent.supportpivot.model.ticket;
 
-import fr.openent.supportpivot.constants.PivotConstants;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -9,6 +8,38 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class PivotTicket implements Ticket {
+
+    public final static String IDEXTERNAL_FIELD = "id_externe";
+    @Deprecated
+    public final static String IDIWS_FIELD = "id_iws";
+    public final static String ID_FIELD = "id_ent";
+    public final static String IDJIRA_FIELD = "id_jira";
+    public final static String COLLECTIVITY_FIELD = "collectivite";
+    public final static String ACADEMY_FIELD = "academie";
+    public final static String CREATOR_FIELD = "demandeur";
+    public final static String TICKETTYPE_FIELD = "type_demande";
+    public final static String TITLE_FIELD = "titre";
+    public final static String DESCRIPTION_FIELD = "description";
+    public final static String PRIORITY_FIELD = "priorite";
+    public final static String MODULES_FIELD = "modules";
+    public final static String COMM_FIELD = "commentaires";
+    public final static String ATTACHMENT_FIELD = "pj";
+    public final static String ATTACHMENT_NAME_FIELD = "nom";
+    public final static String ATTACHMENT_CONTENT_FIELD = "contenu";
+    public final static String STATUSEXTERNAL_FIELD = "statut_external";
+    @Deprecated
+    public final static String STATUSIWS_FIELD = "statut_iws";
+    public final static String STATUSENT_FIELD = "statut_ent";
+    public final static String STATUSJIRA_FIELD = "statut_jira";
+    public final static String DATE_CREA_FIELD = "date_creation";
+    @Deprecated
+    public final static String DATE_RESOIWS_FIELD = "date_resolution_iws";
+    public final static String DATE_RESOEXTERNAL_FIELD = "date_resolution_externe";
+    public final static String DATE_RESO_FIELD = "date_resolution_ent";
+    public final static String DATE_RESOJIRA_FIELD = "date_resolution_jira";
+    public final static String TECHNICAL_RESP_FIELD= "reponse_technique";
+    public final static String CLIENT_RESP_FIELD= "reponse_client";
+    public final static String ATTRIBUTION_FIELD = "attribution";
 
     private JsonObject jsonTicket = new JsonObject();
     private SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -20,28 +51,26 @@ public class PivotTicket implements Ticket {
 
     private void initComments() {
         if (this.getComments() == null) {
-            this.jsonTicket.put(PivotConstants.COMM_FIELD, new JsonArray());
+            this.jsonTicket.put(COMM_FIELD, new JsonArray());
         }
     }
 
     private void initPjs() {
         if (this.getPjs() == null) {
-            this.jsonTicket.put(PivotConstants.ATTACHMENT_FIELD, new JsonArray());
+            this.jsonTicket.put(ATTACHMENT_FIELD, new JsonArray());
         }
     }
 
-    public String getGlpiId() {
-        return jsonTicket.getString(PivotConstants.IDGLPI_FIELD, null);
-    }
-
     public String getJiraId() {
-        return jsonTicket.getString(PivotConstants.IDJIRA_FIELD, null);
+        return jsonTicket.getString(IDJIRA_FIELD, null);
     }
 
-    public String getIwsId() { return jsonTicket.getString(PivotConstants.IDIWS_FIELD, null); }
+    public String getExternalId() { return jsonTicket.getString(IDIWS_FIELD, null); }
+
+
 
     public String getId() {
-        return jsonTicket.getString(PivotConstants.ID_FIELD, null);
+        return jsonTicket.getString(ID_FIELD, null);
     }
 
     public JsonObject getJsonTicket() {
@@ -54,157 +83,119 @@ public class PivotTicket implements Ticket {
 
     @Override
     public String getTitle() {
-        return jsonTicket.getString(PivotConstants.TITLE_FIELD);
+        return jsonTicket.getString(TITLE_FIELD);
     }
 
     @Override
     public String getCollectivity() {
-        return jsonTicket.getString(PivotConstants.COLLECTIVITY_FIELD);
+        return jsonTicket.getString(COLLECTIVITY_FIELD);
     }
 
     @Override
     public String getAcademy() {
-        return jsonTicket.getString(PivotConstants.ACADEMY_FIELD);
+        return jsonTicket.getString(ACADEMY_FIELD);
     }
 
     @Override
     public String getUsers() {
-        return jsonTicket.getString(PivotConstants.CREATOR_FIELD);
+        return jsonTicket.getString(CREATOR_FIELD);
     }
 
     @Override
     public String getContent() {
-        return jsonTicket.getString(PivotConstants.DESCRIPTION_FIELD);
+        return jsonTicket.getString(DESCRIPTION_FIELD);
     }
 
     @Override
     public String getStatus() {
-        return jsonTicket.getString(PivotConstants.STATUSENT_FIELD);
+        return jsonTicket.getString(STATUSENT_FIELD);
     }
 
     @Override
     public Integer getPriority() {
-        return Integer.parseInt(jsonTicket.getString(PivotConstants.PRIORITY_FIELD));
+        return Integer.parseInt(jsonTicket.getString(PRIORITY_FIELD));
     }
 
     @Override
     public String getType() {
-        return jsonTicket.getString(PivotConstants.TICKETTYPE_FIELD);
+        return jsonTicket.getString(TICKETTYPE_FIELD);
     }
 
     @Override
     public JsonArray getComments() {
-        return this.jsonTicket.getJsonArray(PivotConstants.COMM_FIELD);
+        return this.jsonTicket.getJsonArray(COMM_FIELD);
     }
 
     @Override
-    public JsonArray getPjs() { return this.jsonTicket.getJsonArray(PivotConstants.ATTACHMENT_FIELD); }
+    public JsonArray getPjs() { return this.jsonTicket.getJsonArray(ATTACHMENT_FIELD); }
 
     /*#### DATES ####*/
 
     public String getCreatedAt() {
-        return jsonTicket.getString(PivotConstants.DATE_CREA_FIELD);
-    }
-
-    public Date getUpdatedAt() throws ParseException {
-        return this.parser.parse(jsonTicket.getString(PivotConstants.DATE_MOD_FIELD));
+        return jsonTicket.getString(DATE_CREA_FIELD);
     }
 
     public Date getSolvedAt() throws ParseException {
-        return this.parser.parse(jsonTicket.getString(PivotConstants.DATE_RESO_FIELD));
+        return this.parser.parse(jsonTicket.getString(DATE_RESO_FIELD));
+    }
+    public Date getSolvedxternalAt() throws ParseException {
+        return this.parser.parse(jsonTicket.getString(DATE_RESOEXTERNAL_FIELD));
     }
 
-    public Date getGlpiCreatedAt() throws ParseException {
-        return this.parser.parse(jsonTicket.getString(PivotConstants.DATE_CREAGLPI_FIELD));
+    public Date getSolvedJIRAAt() throws ParseException {
+        return this.parser.parse(jsonTicket.getString(DATE_RESOJIRA_FIELD));
     }
 
-    public Date getGlpiUpdatedAt() throws ParseException {
-        return this.parser.parse(jsonTicket.getString(PivotConstants.DATE_MODGLPI_FIELD));
-    }
-
-    public Date getGlpiSolvedAt() throws ParseException {
-        return this.parser.parse(jsonTicket.getString(PivotConstants.DATE_RESOGLPI_FIELD));
-    }
-
-    public Date getJiraCreatedAt() throws ParseException {
-        return parser.parse(jsonTicket.getString(PivotConstants.DATE_CREAJIRA_FIELD));
-    }
-
-    public Date getJiraUpdatedAt() throws ParseException {
-        return this.parser.parse(jsonTicket.getString(PivotConstants.DATE_MODJIRA_FIELD));
-    }
-
-    public Date getJiraSolvedAt() throws ParseException {
-        return this.parser.parse(jsonTicket.getString(PivotConstants.DATE_RESOJIRA_FIELD));
-    }
 
     @Override
     public String getAttributed() {
-        return jsonTicket.getString(PivotConstants.ATTRIBUTION_FIELD);
+        return jsonTicket.getString(ATTRIBUTION_FIELD);
     }
 
 
     /* SETTERS */
 
     public void setTitle(String title) {
-        jsonTicket.put(PivotConstants.TITLE_FIELD, title.trim());
+        jsonTicket.put(TITLE_FIELD, title.trim());
     }
 
     public void setContent(String content) {
-        jsonTicket.put(PivotConstants.DESCRIPTION_FIELD, content.trim());
+        jsonTicket.put(DESCRIPTION_FIELD, content.trim());
     }
 
     public void setPriority(String priority) {
-        jsonTicket.put(PivotConstants.PRIORITY_FIELD, priority.trim());
+        jsonTicket.put(PRIORITY_FIELD, priority.trim());
     }
 
     public void setType(String type) {
-        jsonTicket.put(PivotConstants.TICKETTYPE_FIELD, type.trim());
+        jsonTicket.put(TICKETTYPE_FIELD, type.trim());
     }
 
     public void setDate(Date date) {
-        jsonTicket.put(PivotConstants.DATE_CREA_FIELD, date);
+        jsonTicket.put(DATE_CREA_FIELD, date);
     }
 
     public void setAttributed(String attribution) {
-        jsonTicket.put(PivotConstants.ATTRIBUTION_FIELD, attribution);
+        jsonTicket.put(ATTRIBUTION_FIELD, attribution);
     }
 
-    public void setStatus(String status, String attributedName) {
-        if (attributedName.equals(PivotConstants.ATTRIBUTION_GLPI)) {
-            jsonTicket.put(PivotConstants.STATUSGLPI_FIELD, status);
-        } else {
-            jsonTicket.put(PivotConstants.STATUSENT_FIELD, status);
+    public void setStatus(String status) {
+            jsonTicket.put(STATUSENT_FIELD, status);
         }
+    public void setStatusExternal(String status) {
+        jsonTicket.put(STATUSEXTERNAL_FIELD, status);
+    }
+    public void setStatusJIRA(String status) {
+        jsonTicket.put(STATUSJIRA_FIELD, status);
     }
 
-    public void setGlpiId(String glpiId) {
-        jsonTicket.put(PivotConstants.IDGLPI_FIELD, glpiId.trim());
-    }
 
-    public void setJiraId(String glpiId) {
-        jsonTicket.put(PivotConstants.IDJIRA_FIELD, glpiId.trim());
+    public void setJiraId(String jiraId) {
+        jsonTicket.put(IDJIRA_FIELD, jiraId.trim());
     }
 
     public void setCreator(String creator) {
-        jsonTicket.put(PivotConstants.CREATOR_FIELD, creator.trim());
-    }
-
-    public void setGlpiCreatedAt(String createdAt) {
-        jsonTicket.put(PivotConstants.DATE_CREAGLPI_FIELD, createdAt.trim());
-    }
-
-
-    public void setGlpiUpdatedAt(String updatedAt) {
-        jsonTicket.put(PivotConstants.DATE_MODGLPI_FIELD, updatedAt.trim());
-    }
-
-    public void setGlpiSolvedAt(String solvedAt) {
-        jsonTicket.put(PivotConstants.DATE_RESOGLPI_FIELD, solvedAt.trim());
-    }
-
-    public void setCategorie(String categorie) { // TODO => mapping
-        jsonTicket.put(PivotConstants.MODULESGLPI_FIELD, categorie.trim());
+        jsonTicket.put(CREATOR_FIELD, creator.trim());
     }
 
     public void setJsonObject(JsonObject ticket) {
@@ -216,16 +207,18 @@ public class PivotTicket implements Ticket {
     }
 
     public void setId(String id) {
-        jsonTicket.put(PivotConstants.ID_FIELD, id.trim());
+        jsonTicket.put(ID_FIELD, id.trim());
     }
 
-    public void setIwsId(String id) {
-        jsonTicket.put(PivotConstants.IDIWS_FIELD, id.trim());
+    //Retrocompatibility use id_iws as field for external tool id
+    public void setExternalId(String id) {
+        jsonTicket.put(IDIWS_FIELD, id.trim());
+        jsonTicket.put(IDEXTERNAL_FIELD, id.trim());
     }
 
-    public void setComments(JsonArray comments) {this.jsonTicket.put(PivotConstants.COMM_FIELD, comments);}
+    public void setComments(JsonArray comments) {this.jsonTicket.put(COMM_FIELD, comments);}
 
-    public void setPjs(JsonArray pjs) { this.jsonTicket.put(PivotConstants.ATTACHMENT_FIELD, pjs); }
+    public void setPjs(JsonArray pjs) { this.jsonTicket.put(ATTACHMENT_FIELD, pjs); }
 
     public void addComment(JsonObject comment) {
         this.getComments().add(comment);
@@ -233,5 +226,12 @@ public class PivotTicket implements Ticket {
 
     public void addPj(JsonObject pj) {
         this.getPjs().add(pj);
+    }
+
+    public static class Attachment extends  JsonObject{
+
+        public void setName(String name){ put(ATTACHMENT_NAME_FIELD, name); }
+
+        public void setContent(String content){ put(ATTACHMENT_CONTENT_FIELD, content); }
     }
 }

@@ -4,13 +4,10 @@ import fr.openent.supportpivot.constants.GlpiConstants;
 import fr.openent.supportpivot.helpers.ParserTool;
 import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
-import io.vertx.core.AsyncResult;
-import io.vertx.core.Future;
-import io.vertx.core.Handler;
 import io.vertx.core.json.JsonObject;
 import org.w3c.dom.Document;
 
-public class GlpiEndpointHelper {
+class GlpiEndpointHelper {
 
     static Document generateXMLRPCCreateTicketQuery(PivotTicket ticket) {
         String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><methodCall><methodName>jira.createTicket</methodName><params><param><value><struct>";
@@ -22,11 +19,11 @@ public class GlpiEndpointHelper {
         xml += xmlAddField(GlpiConstants.TYPE_CREATE, "integer", GlpiConstants.TYPE_ID);
 
         if (ticket.getJiraId() != null) {
-            xml += xmlAddField(GlpiConstants.ID_JIRA_CREATE, "string", ticket.getJiraId());
+            xml += xmlAddField(GlpiConstants.ID_JIRA_CREATION, "string", ticket.getJiraId());
         }
 
         if (ticket.getId() != null) {
-            xml += xmlAddField(GlpiConstants.ID_ENT_CREATE, "string", ticket.getId());
+            xml += xmlAddField(GlpiConstants.ID_ENT_CREATION, "string", ticket.getId());
         }
 
         xml += GlpiConstants.END_XML_FORMAT;

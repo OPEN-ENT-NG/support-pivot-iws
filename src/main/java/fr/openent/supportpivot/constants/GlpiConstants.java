@@ -23,7 +23,7 @@ public class GlpiConstants {
     public final static String TITLE_FIELD = "name";
     public final static String DESCRIPTION_FIELD = "content";
     public final static String PRIORITY_FIELD = "priority";
-    public final static String MODULES_FIELD = "ticketcategories_name";
+    public final static String CATEGORIES_FIELD = "ticketcategories_name";
 
 
     public final static String COMM_FIELD = "followups";
@@ -153,16 +153,19 @@ public class GlpiConstants {
         }
     };*/
 
+
+
     public final static String DESCRIPTION_CREATE = "content";
     public final static String TITLE_CREATE = "title";
     public final static String ENTITY_CREATE = "entity";
     public final static String REQUESTER_CREATE = "requester";
     public final static String TYPE_CREATE = "type";
     public final static String CATEGORY_CREATE = "category";
-    public final static String ID_JIRA_CREATE = "numjira";
-    public final static String ID_ENT_CREATE = "nument";
-    public final static String ID_ENT_CREATE_RESPONSE = "numero_ent";
-    public final static String ID_JIRA_CREATE_RESPONSE = "numero_jira";
+    public final static String ID_JIRA_CREATION = "numjira";
+    public final static String ID_ENT_CREATION = "nument";
+
+    public final static String ID_ENT = "numero_ent";
+    public final static String ID_JIRA = "numero_jira";
 
     public final static String ENTITY_ID = "342";
     public final static String REQUESTER_ID = "42";

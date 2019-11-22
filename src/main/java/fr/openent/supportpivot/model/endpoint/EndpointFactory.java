@@ -31,6 +31,6 @@ public class EndpointFactory {
     }
 
     public Endpoint getPivotEndpoint() {
-        return new PivotEndpoint(this.vertx, this.glpiService);
+        return new PivotEndpoint(this.vertx);
     }
 }

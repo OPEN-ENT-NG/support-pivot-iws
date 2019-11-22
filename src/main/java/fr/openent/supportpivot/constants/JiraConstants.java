@@ -13,7 +13,7 @@ public class JiraConstants {
     public final static String PROJECT = "project";
     public final static String PROJECT_KEY = "key";
 
-    public final static String IDIWS_FIELD = "id_iws";
+    public final static String IDEXTERNATBUGTRACKER_FIELD = "id_iws";
     public final static String IDENT_FIELD = "id_ent";
     public final static String IDJIRA_FIELD = "id_jira";
     public final static String IDGLPI_FIELD = "id_glpi";
@@ -69,9 +69,6 @@ public class JiraConstants {
 
     public static final String TYPE_REQUEST = "Demande";
     public static final String TYPE_ANOMALY = "Anomalie";
-
-    public static final String GLPI_CUSTOM_FIELD = "12700";
-    public static final String IWS_CUSTOM_FIELD = "12400";
 
     public final static Map<String, String> APPLICATIONS_MAP = new HashMap<String, String>()
     {
