@@ -88,33 +88,39 @@ public class GlpiService {
 
         sendingRequest.startRequest(result -> {
             if (result.succeeded()) {
-                result.result().bodyHandler(body -> {
-                    Document xml = ParserTool.getParsedXml(body);
-                    noReloginCheck(xml, loginResult -> {
-                        if (loginResult.succeeded()) {
-                            if (loginResult.result()) {
-                                handler.handle(Future.succeededFuture(xml));
+                if (result.result().statusCode()>=200 && result.result().statusCode()<400) {
+                    result.result().bodyHandler(body -> {
+                        Document xml = ParserTool.getParsedXml(body);
+                        noReloginCheck(xml, loginResult -> {
+                            if (loginResult.succeeded()) {
+                                if (loginResult.result()) {
+                                    handler.handle(Future.succeededFuture(xml));
+                                } else {
+                                    log.info("login has been renewed => try again " + method + ", uri: " + uri);
+                                    sendRequest(method, uri, xmlData, requestResult -> {
+                                        if (requestResult.succeeded()) {
+                                            handler.handle(Future.succeededFuture(requestResult.result()));
+                                        } else {
+                                            handler.handle(Future.failedFuture(
+                                                    "Error at re-sending request after re-authentication: "
+                                                            + requestResult.cause().getMessage())
+                                            );
+                                        }
+                                    });
+                                }
                             } else {
-                                log.info("login has been renewed => try again " + method  + ", uri: "+ uri);
-                                sendRequest(method, uri, xmlData, requestResult -> {
-                                    if (requestResult.succeeded()) {
-                                        handler.handle(Future.succeededFuture(requestResult.result()));
-                                    } else {
-                                        handler.handle(Future.failedFuture(
-                                                "Error at re-sending request after re-authentication: "
-                                                        + requestResult.cause().getMessage())
-                                        );
-                                    }
-                                });
+                                log.error("Authentication failed. Method: " + method + ", uri: " + uri);
+                                log.error("Authentication failed. XmlData :" + ParserTool.getStringFromDocument(xmlData));
+                                handler.handle(Future.failedFuture("Authentication problem: " + loginResult.cause().getMessage()));
                             }
-                        } else {
-                            log.error("Authentication failed. Method: " + method  + ", uri: "+ uri);
-                            log.error("Authentication failed. XmlData :" +ParserTool.getStringFromDocument(xmlData)) ;
-                            handler.handle(Future.failedFuture("Authentication problem: " + loginResult.cause().getMessage()));
-                        }
+                        });
                     });
-                });
+                }else{
+                    log.error("Sending Request failed, code :"+ result.result().statusCode() +" . Method: " + method + ", uri: " + uri);
+                    handler.handle(Future.failedFuture("Sending request failed : " + result.result().statusCode()));
+                }
             } else {
+                log.error("Authentication failed. Method: " + method + ", uri: " + uri);
                 handler.handle(Future.failedFuture("Sending request failed: " + result.cause().getMessage()));
             }
         });
@@ -189,7 +195,9 @@ public class GlpiService {
             if (fieldName.equals(GlpiConstants.ERROR_CODE_NAME)) {
                 log.error("GLPI request an Error occured " + ParserTool.getStringFromDocument(xmlResult));
                 String fieldValue = session.getElementsByTagName("value").item(0).getTextContent().trim();
-                if (fieldValue.equals(GlpiConstants.ERROR_LOGIN_CODE)) {
+
+                //Bad glpi webservice implementation : authentication error can thrown with code 3 also
+                if (fieldValue.equals(GlpiConstants.ERROR_LOGIN_CODE) || fieldValue.equals("3")) {
                     //if it's an authentication error
                     loginCheckCounter++;
                     LoginTool.getGlpiSessionToken(httpClient, result -> {
