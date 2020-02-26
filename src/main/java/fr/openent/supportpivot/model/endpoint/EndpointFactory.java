@@ -1,36 +1,29 @@
 package fr.openent.supportpivot.model.endpoint;
 
 import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
-import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
 import fr.openent.supportpivot.services.GlpiService;
 import fr.openent.supportpivot.services.HttpClientService;
+import fr.openent.supportpivot.services.JiraService;
+import fr.openent.supportpivot.services.JiraServiceImpl;
 import io.vertx.core.Vertx;
 
-public class EndpointFactory {
+public  class EndpointFactory {
 
-    private HttpClientService httpClientService;
-    private Vertx vertx;
-    private DefaultDemandeServiceImpl demandeService;
-    private DefaultJiraServiceImpl jiraService;
-    private GlpiService glpiService;
 
-    public EndpointFactory(HttpClientService httpClientService, DefaultDemandeServiceImpl demandeService, DefaultJiraServiceImpl jiraService, GlpiService glpiService, Vertx vertx) {
-        this.httpClientService = httpClientService;
-        this.vertx = vertx;
-        this.demandeService = demandeService;
-        this.jiraService = jiraService;
-        this.glpiService = glpiService;
+
+    public static Endpoint getGlpiEndpoint(GlpiService glpiService) {
+        return new GlpiEndpoint(glpiService);
     }
 
-    public Endpoint getGlpiEndpoint() {
-        return new GlpiEndpoint(this.glpiService);
+    public static JiraEndpoint getJiraEndpoint(HttpClientService httpClientService,  JiraService jiraService) {
+        return new JiraEndpoint(httpClientService, jiraService);
     }
 
-    public Endpoint getJiraEndpoint() {
-        return new JiraEndpoint(this.httpClientService, demandeService, jiraService);
+    public static Endpoint getPivotEndpoint(Vertx vertx) {
+        return new PivotEndpoint(vertx);
     }
 
-    public Endpoint getPivotEndpoint() {
-        return new PivotEndpoint(this.vertx);
+    public static LdeEndPoint getLdeEndpoint() {
+        return new LdeEndPoint();
     }
 }

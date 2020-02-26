@@ -1,10 +1,12 @@
 package fr.openent.supportpivot.services;
 
 import fr.openent.supportpivot.model.ticket.PivotTicket;
-import fr.openent.supportpivot.model.ticket.Ticket;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+
+import java.util.List;
 
 public interface RouterService {
 
@@ -18,4 +20,6 @@ public interface RouterService {
 
     void triggerTicket(String source, JsonObject data,
                        Handler<AsyncResult<JsonObject>> handler);
+
+    void readTickets(String source, JsonObject data, Handler<AsyncResult<JsonArray>> handler);
 }

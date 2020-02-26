@@ -16,7 +16,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package fr.openent.supportpivot.deprecatedservices;
+package fr.openent.supportpivot.services;
 
 import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;

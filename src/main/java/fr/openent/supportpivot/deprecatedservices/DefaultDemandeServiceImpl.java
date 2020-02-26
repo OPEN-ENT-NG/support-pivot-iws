@@ -78,7 +78,7 @@ public class DefaultDemandeServiceImpl implements DemandeService {
             DESCRIPTION_FIELD
     };
 
-    private final JiraService jiraService;
+    private final DefaultJiraServiceImpl jiraService;
     private MongoService mongoService;
 
     private static final String ENT_TRACKERUPDATE_ADDRESS = "support.update.bugtracker";

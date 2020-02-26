@@ -39,7 +39,7 @@ public class ExternalSynchroTask implements Handler<Long> {
 
     @Override
     public void handle(Long event) {
-        log.info("Zimbra cron started : " + action);
+        log.info("GLPI cron started : " + action);
 
         eb.send("supportpivot.glpi.trigger",new JsonObject(),
                 res -> {

@@ -19,13 +19,13 @@ public class PivotHttpClient {
 
     private static final Logger log = LoggerFactory.getLogger(PivotHttpClient.class);
 
-
-    public PivotHttpClient(HttpClient httpClient, List<String> middlewareNames) {
+    public PivotHttpClient(HttpClient httpClient) {
         this.httpClient = httpClient;
     }
 
-    public PivotHttpClient(HttpClient httpClient) {
-        this.httpClient = httpClient;
+    public void setBasicAuth (String login, String password){
+        basicAuthLogin = login;
+        basicAuthPwd = password;
     }
 
     @SuppressWarnings("unused")
@@ -38,11 +38,7 @@ public class PivotHttpClient {
         return createRequest(HttpConstants.METHOD_POST, uri, data);
     }
 
-    public PivotHttpClientRequest createRequest(String method, String uri, String data){
-        return this.createRequest(method, uri, data, new ArrayList<>());
-    }
-
-    public PivotHttpClientRequest createRequest(String method, String uri, String data, List<String> middlewares) {
+    public PivotHttpClientRequest createRequest(String method, String uri, String data) {
 
         HttpClientRequest request;
         switch (method) {

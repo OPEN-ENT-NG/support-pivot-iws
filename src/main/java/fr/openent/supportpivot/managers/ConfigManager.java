@@ -32,8 +32,10 @@ public class ConfigManager {
     private final String externalEndpointActivated;
 
 
-    private final JsonObject customFields;
+    private final JsonObject jiraCustomFields;
     private final String jiraCustomFieldIdForExternalId;
+    private final String jiraDefaultStatus;
+    private final JsonObject jiraStatusMapping;
 
     private final String glpiSupportCGIUsername;
 
@@ -97,14 +99,18 @@ public class ConfigManager {
         jiraProjectKey = config.getString("jira-project-key");
         jiraLogin = config.getString("jira-login");
         jiraPassword = config.getString("jira-passwd");
-        customFields = config.getJsonObject("jira-custom-fields");
+        jiraCustomFields = config.getJsonObject("jira-custom-fields");
 
-        if(customFields.containsKey("id_external")) {
-            jiraCustomFieldIdForExternalId = customFields.getString("id_external");
+        if(jiraCustomFields.containsKey("id_external")) {
+            jiraCustomFieldIdForExternalId = jiraCustomFields.getString("id_external");
         }else{
             //For retro-compatibility
-            jiraCustomFieldIdForExternalId = customFields.getString("id_iws");
+            jiraCustomFieldIdForExternalId = jiraCustomFields.getString("id_iws");
         }
+        jiraStatusMapping = config.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
+        jiraDefaultStatus = config.getJsonObject("jira-status-mapping").getString("statutsDefault");
+
+
     }
 
     private static void CheckUrlSyntax(String URLvalue, String parameterName) {
@@ -146,10 +152,11 @@ public class ConfigManager {
     public String getJiraPassword() { return jiraPassword; }
     public String getJiraAuthInfo() { return jiraLogin + ":" + jiraPassword; }
     public String getJiraProjectKey() { return jiraProjectKey; }
-    public JsonObject getCustomFields() { return customFields; }
+    public JsonObject getJiraCustomFields() { return jiraCustomFields; }
     public String getJiraCustomFieldIdForExternalId() { return jiraCustomFieldIdForExternalId; }
     public String getExternalEndpointActivated() { return externalEndpointActivated; }
-
+    public JsonObject getJiraStatusMapping() { return jiraStatusMapping; }
+    public String getJiraDefaultStatus() { return jiraDefaultStatus; }
 
 
     /** Holder */

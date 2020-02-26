@@ -7,6 +7,32 @@ import java.util.Map;
 
 public class PivotConstants {
 
+    public static enum SOURCES {
+        ENT("ENT"),
+        JIRA("JIRA"),
+        IWS("IWS"),
+        GLPI("GLPI"),
+        LDE("LDE");
+
+        private String name;
+        public String toString(){return name;}
+        public boolean equals(String name){return name.equals(this.name);}
+
+        private SOURCES(String name) { this.name = name;   }
+    }
+
+    public  static enum COLLECTIVITIES {
+        MDP("MDP"),
+        CRNA("CRNA"),
+        CRIDF("CRIDF");
+
+        private String name;
+        public String toString(){return name;}
+        public boolean equals(String name){return name.equals(this.name);}
+
+        private COLLECTIVITIES(String name) { this.name = name;   }
+    }
+
     public final static String BUS_SEND = "support.update.bugtracker";
     public final static String ENT_BUS_OK_STATUS = "OK";
 

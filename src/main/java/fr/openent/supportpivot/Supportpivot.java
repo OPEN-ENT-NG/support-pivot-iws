@@ -20,15 +20,11 @@ package fr.openent.supportpivot;
 
 import fr.openent.supportpivot.controllers.GlpiController;
 import fr.openent.supportpivot.controllers.JiraController;
+import fr.openent.supportpivot.controllers.LdeController;
 import fr.openent.supportpivot.controllers.SupportPivotController;
 import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.managers.ServiceManager;
-import fr.openent.supportpivot.services.ExternalSynchroTask;
-import io.vertx.core.shareddata.LocalMap;
 import org.entcore.common.http.BaseServer;
-import fr.wseduc.cron.CronTrigger;
-
-import java.text.ParseException;
 
 public class Supportpivot extends BaseServer {
 
@@ -43,11 +39,11 @@ public class Supportpivot extends BaseServer {
 			return;
 	   */
 
-		ServiceManager.init(vertx, config, getEventBus(vertx));
+		ServiceManager.init(vertx, config);
 		addController(new SupportPivotController());
 		addController(new GlpiController());
 		addController(new JiraController());
-
+		addController(new LdeController());
 
 	}
 

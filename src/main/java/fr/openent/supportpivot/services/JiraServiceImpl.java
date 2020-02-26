@@ -16,10 +16,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-package fr.openent.supportpivot.deprecatedservices;
+package fr.openent.supportpivot.services;
 
 import fr.openent.supportpivot.managers.ConfigManager;
-import fr.openent.supportpivot.services.JiraService;
 import fr.wseduc.webutils.Either;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -40,7 +39,10 @@ import java.text.DateFormat;
 import java.text.Format;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.*;
+import java.util.Base64;
+import java.util.Date;
+import java.util.LinkedList;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -52,9 +54,9 @@ import static fr.openent.supportpivot.model.ticket.PivotTicket.*;
  * Created by mercierq on 09/02/2018.
  * Default implementation for JiraService
  */
-public class DefaultJiraServiceImpl implements JiraService {
+public class JiraServiceImpl implements JiraService {
 
-    private final Logger LOGGER = LoggerFactory.getLogger(DefaultJiraServiceImpl.class);
+    private final Logger LOGGER = LoggerFactory.getLogger(JiraServiceImpl.class);
     private final Vertx vertx;
     private final URI JIRA_HOST;
     private final String JIRA_AUTH_INFO;
@@ -78,7 +80,7 @@ public class DefaultJiraServiceImpl implements JiraService {
     private static final int HTTP_STATUS_404_NOT_FOUND = 404;
     private static final int HTTP_STATUS_201_CREATED = 201;
 
-    public DefaultJiraServiceImpl(Vertx vertx, JsonObject config) {
+    public JiraServiceImpl(Vertx vertx, JsonObject config) {
 
         this.vertx = vertx;
         String jiraLogin = config.getString("jira-login");
@@ -457,6 +459,7 @@ public class DefaultJiraServiceImpl implements JiraService {
                         case (HTTP_STATUS_200_OK):
                             response.bodyHandler(bufferGetInfosTicket -> {
                                 JsonObject jsonCurrentTicketInfos = new JsonObject(bufferGetInfosTicket.toString());
+                                /*
                                 //Is JIRA ticket had been created by IWS ?
                                 String jiraTicketIdIWS = jsonCurrentTicketInfos.getJsonObject("fields").getString(JIRA_FIELD.getString("id_iws"));
                                 if (jiraTicketIdIWS == null) {
@@ -464,25 +467,44 @@ public class DefaultJiraServiceImpl implements JiraService {
                                     return;
                                 }
 
+
+
                                 //Is JIRA ticket had been created by same IWS issue ?
                                 String jsonPivotIdIWS = jsonPivotIn.getString(IDIWS_FIELD);
                                 if (!jiraTicketIdIWS.equals(jsonPivotIdIWS)) {
                                     handler.handle(new Either.Left<>("102;JIRA Ticket " + jiraTicketId + " already link with an another IWS issue"));
                                     return;
                                 }
+                                */
+
 
                                 //Convert jsonPivotIn into jsonJiraTicket
                                 final JsonObject jsonJiraUpdateTicket = new JsonObject();
-                                jsonJiraUpdateTicket.put("fields", new JsonObject()
-                                        .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD))
-                                        .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD))
-                                        .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESO_FIELD))
-                                        .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
-                                        .put(("description"), jsonPivotIn.getString(DESCRIPTION_FIELD))
-                                        .put("summary", jsonPivotIn.getString(TITLE_FIELD))
-                                        .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(CREATOR_FIELD)));
+                                JsonObject fields =  new JsonObject();
+                                if(jsonPivotIn.getString(IDIWS_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDIWS_FIELD));
+                                if(jsonPivotIn.getString(IDEXTERNAL_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDEXTERNAL_FIELD));
+                                if(jsonPivotIn.getString(STATUSENT_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD));
+                                if(jsonPivotIn.getString(STATUSIWS_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD));
+                                if(jsonPivotIn.getString(STATUSEXTERNAL_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSEXTERNAL_FIELD));
+                                if(jsonPivotIn.getString(DATE_RESO_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESO_FIELD));
+                                if(jsonPivotIn.getString(DATE_RESOIWS_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD));
+                                if(jsonPivotIn.getString(DESCRIPTION_FIELD)!=null)
+                                    fields.put(("description"), jsonPivotIn.getString(DESCRIPTION_FIELD));
+                                if(jsonPivotIn.getString(TITLE_FIELD)!=null)
+                                    fields.put("summary", jsonPivotIn.getString(TITLE_FIELD));
+                                if(jsonPivotIn.getString(CREATOR_FIELD)!=null)
+                                    fields.put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(CREATOR_FIELD));
+                                jsonJiraUpdateTicket.put("fields", fields);
 
-                                //Update Jira
+
+                                        //Update Jira
                                 final URI urlUpdateJiraTicket = JIRA_REST_API_URI.resolve(jiraTicketId);
                                 final HttpClientRequest modifyTicketRequest = httpClient.put(urlUpdateJiraTicket.toString(), modifyResp -> {
                                     if (modifyResp.statusCode() == HTTP_STATUS_204_NO_CONTENT) {
@@ -517,7 +539,8 @@ public class DefaultJiraServiceImpl implements JiraService {
                                             handler.handle(new Either.Right<>(new JsonObject().put("status", "OK")));
                                         }
                                     } else {
-                                        LOGGER.error("Error when calling URL : " + modifyResp.statusMessage());
+                                        LOGGER.error("Error when calling URL " + urlUpdateJiraTicket + " : " +  modifyResp.statusMessage());
+                                        modifyResp.bodyHandler(body -> LOGGER.error(body.toString()));
                                         handler.handle(new Either.Left<>("Error when update Jira ticket information"));
                                     }
                                 });
@@ -722,7 +745,7 @@ public class DefaultJiraServiceImpl implements JiraService {
             if (response.statusCode() == HTTP_STATUS_200_OK) {
                 response.bodyHandler(bufferGetInfosTicket -> {
                     JsonObject jsonGetInfosTicket = new JsonObject(bufferGetInfosTicket.toString());
-                    convertJiraReponseToJsonPivot(jsonGetInfosTicket, handler);
+                    handler.handle(new Either.Right<>(jsonGetInfosTicket));
                 });
             } else {
                 LOGGER.error("Error when calling URL : " + JIRA_HOST.resolve(urlGetTicketGeneralInfo) + ":" + response.statusCode() + " " + response.statusMessage());
@@ -734,254 +757,11 @@ public class DefaultJiraServiceImpl implements JiraService {
         terminateRequest(httpClientRequestGetInfo);
     }
 
-    /**
-     * Modified Jira JSON to prepare to send the email to IWS
-     */
-    public void convertJiraReponseToJsonPivot(final JsonObject jiraTicket,
-                                               final Handler<Either<String, JsonObject>> handler) {
-
-        JsonObject fields = jiraTicket.getJsonObject("fields");
-
-        if (!fields.containsKey(JIRA_FIELD.getString("id_iws"))
-                || fields.getString(JIRA_FIELD.getString("id_iws")) == null) {
-            handler.handle(new Either.Left<>("Field " + JIRA_FIELD.getString("id_iws") + " does not exist."));
-        } else {
-
-            final JsonObject jsonPivot = new JsonObject();
-
-            jsonPivot.put(IDJIRA_FIELD, jiraTicket.getString("key"));
-
-            jsonPivot.put(COLLECTIVITY_FIELD, ConfigManager.getInstance().getCollectivity());
-            jsonPivot.put(ACADEMY_FIELD, ACADEMY_NAME);
-
-            if (fields.getString(JIRA_FIELD.getString("creator")) != null) {
-                jsonPivot.put(CREATOR_FIELD,
-                        fields.getString(stringEncode(JIRA_FIELD.getString("creator"))));
-            } else {
-                jsonPivot.put(CREATOR_FIELD, "");
-            }
-
-            jsonPivot.put(TICKETTYPE_FIELD, fields
-                    .getJsonObject("issuetype").getString("name"));
-            jsonPivot.put(TITLE_FIELD, fields.getString("summary"));
-
-            if (fields.getString("description") != null) {
-                jsonPivot.put(DESCRIPTION_FIELD,
-                        fields.getString("description"));
-            } else {
-                jsonPivot.put(DESCRIPTION_FIELD, "");
-            }
 
 
-            String currentPriority = fields.getJsonObject("priority").getString("name");
-            switch (currentPriority) {
-                case "High":
-                case "Majeure":
-                    currentPriority = PRIORITY_MAJOR;
-                    break;
-                case "Highest":
-                case "Bloquante":
-                    currentPriority = PRIORITY_BLOCKING;
-                    break;
-                case "Lowest":
-                case "Mineure":
-                default:
-                    currentPriority = PRIORITY_MINOR;
-                    break;
-            }
-
-            jsonPivot.put(PRIORITY_FIELD, currentPriority);
-
-            jsonPivot.put(MODULES_FIELD, fields.getJsonArray("labels"));
-
-            if (fields.getString(JIRA_FIELD.getString("id_ent")) != null) {
-                jsonPivot.put(ID_FIELD,
-                        fields.getString(JIRA_FIELD.getString("id_ent")));
-            } else {
-                jsonPivot.put(ID_FIELD, "");
-            }
-
-            if (fields.getString(JIRA_FIELD.getString("id_iws")) != null) {
-                jsonPivot.put(IDIWS_FIELD,
-                        fields.getString(JIRA_FIELD.getString("id_iws")));
-            }
-
-            JsonArray comm = fields.getJsonObject("comment")
-                    .getJsonArray("comments", new fr.wseduc.webutils.collections.JsonArray());
-            JsonArray jsonCommentArray = new fr.wseduc.webutils.collections.JsonArray();
-            for (int i = 0; i < comm.size(); i++) {
-                JsonObject comment = comm.getJsonObject(i);
-                //Write only if the comment is public
-                if (!comment.containsKey("visibility")) {
-                    String commentFormated = serializeComment(comment);
-                    jsonCommentArray.add(commentFormated);
-                }
-            }
-            jsonPivot.put(COMM_FIELD, jsonCommentArray);
-
-            if (fields.getString(JIRA_FIELD.getString("status_ent")) != null) {
-                jsonPivot.put(STATUSENT_FIELD,
-                        fields.getString(JIRA_FIELD.getString("status_ent")));
-            }
-            if (fields.getString(JIRA_FIELD.getString("status_iws")) != null) {
-                jsonPivot.put(STATUSIWS_FIELD,
-                        fields.getString(JIRA_FIELD.getString("status_iws")));
-            }
-
-            String currentStatus = fields.getJsonObject("status").getString("name");
-
-            String currentStatusToIWS;
-            currentStatusToIWS = JIRA_STATUS_DEFAULT;
-            for (String fieldName : JIRA_STATUS_MAPPING.fieldNames()) {
-                if (JIRA_STATUS_MAPPING.getJsonArray(fieldName).contains(currentStatus)) {
-                    currentStatusToIWS = fieldName;
-                    break;
-                }
-            }
-
-            jsonPivot.put(STATUSJIRA_FIELD, currentStatusToIWS);
-
-            if (fields.getString(JIRA_FIELD.getString("creation")) != null) {
-                jsonPivot.put(DATE_CREA_FIELD,
-                        fields.getString(JIRA_FIELD.getString("creation")));
-            }
-
-            if (fields.getString(JIRA_FIELD.getString("resolution_iws")) != null) {
-                jsonPivot.put(DATE_RESOIWS_FIELD,
-                        fields.getString(JIRA_FIELD.getString("resolution_iws")));
-            }
-
-            if (fields.getString(JIRA_FIELD.getString("resolution_ent")) != null) {
-                jsonPivot.put(DATE_RESO_FIELD,
-                        fields.getString(JIRA_FIELD.getString("resolution_ent")));
-            }
-
-            if (fields.getString("resolutiondate") != null) {
-                String dateFormated = getDateFormatted(fields.getString("resolutiondate"), false);
-                jsonPivot.put(DATE_RESOJIRA_FIELD, dateFormated);
-            }
-
-            if (fields.getString(JIRA_FIELD.getString("response_technical")) != null) {
-                jsonPivot.put(TECHNICAL_RESP_FIELD,
-                        fields.getString(JIRA_FIELD.getString("response_technical")));
-            }
-
-            jsonPivot.put(ATTRIBUTION_FIELD, ATTRIBUTION_IWS);
-
-            JsonArray attachments = fields.getJsonArray("attachment", new fr.wseduc.webutils.collections.JsonArray());
-
-            final JsonArray allPJConverted = new fr.wseduc.webutils.collections.JsonArray();
-            final AtomicInteger nbAttachment = new AtomicInteger(attachments.size());
-            final AtomicBoolean responseSent = new AtomicBoolean(false);
-
-            for (Object attachment : attachments) {
-                if (!(attachment instanceof JsonObject)) {
-                    nbAttachment.decrementAndGet();
-                    continue;
-                }
-
-                final JsonObject attachmentInfos = (JsonObject) attachment;
-                getJiraPJ(attachmentInfos, getJiraPjResp -> {
-
-                            if (getJiraPjResp.isRight()) {
-                                String b64FilePJ = getJiraPjResp.right().getValue().getString("b64Attachment");
-                                JsonObject currentPJ = new JsonObject();
-                                currentPJ.put(ATTACHMENT_NAME_FIELD, attachmentInfos.getString("filename"));
-                                currentPJ.put(ATTACHMENT_CONTENT_FIELD, b64FilePJ);
-                                allPJConverted.add(currentPJ);
-                            } else {
-                                handler.handle(getJiraPjResp);
-                            }
-
-                            //last attachment handles the response
-                            if (nbAttachment.decrementAndGet() <= 0) {
-                                jsonPivot.put(ATTACHMENT_FIELD, allPJConverted);
-                                responseSent.set(true);
-                                handler.handle(new Either.Right<>(jsonPivot));
-                            }
-                        }
-                );
-            }
-
-            //if no attachment handle the response
-            if (!responseSent.get() && nbAttachment.get() == 0) {
-                handler.handle(new Either.Right<>(jsonPivot));
-            }
-        }
-    }
-
-    /**
-     * Get Jira PJ via Jira API
-     */
-    private void getJiraPJ(final JsonObject attachmentInfos,
-                           final Handler<Either<String, JsonObject>> handler) {
 
 
-        String attachmentLink = attachmentInfos.getString("content");
 
-        final HttpClientRequest getAttachmentrequest = httpClient.get(attachmentLink, response -> {
-            if (response.statusCode() == HTTP_STATUS_200_OK) {
-                response.bodyHandler(bufferGetInfosTicket -> {
-                    String b64Attachment = encoder.encodeToString(bufferGetInfosTicket.getBytes());
-                    handler.handle(new Either.Right<>(
-                            new JsonObject().put("status", "OK")
-                                    .put("b64Attachment", b64Attachment)));
 
-                });
-            } else {
-                LOGGER.error("Error when calling URL : " + attachmentLink + ":" + response.statusMessage());
-                handler.handle(new Either.Left<>("Error when getting Jira attachment (" + attachmentLink + ") information"));
-            }
-        });
-
-        terminateRequest(getAttachmentrequest);
-
-    }
-
-    /**
-     * Serialize comments : date | author | content
-     *
-     * @param comment Json Object with a comment to serialize
-     * @return String with comment serialized
-     */
-    private String serializeComment(final JsonObject comment) {
-        String content = getDateFormatted(comment.getString("created"), true)
-                + " | " + comment.getJsonObject("author").getString("displayName")
-                + " | " + getDateFormatted(comment.getString("created"), false)
-                + " | " + comment.getString("body");
-
-        String origContent = comment.getString("body");
-
-        return hasToSerialize(origContent) ? content : origContent;
-    }
-
-    /**
-     * Check if comment must be serialized
-     * If it's '|' separated (at least 4 fields)
-     * And first field is 14 number (AAAMMJJHHmmSS)
-     * Then it must not be serialized
-     *
-     * @param content Comment to check
-     * @return true if the comment has to be serialized
-     */
-    private boolean hasToSerialize(String content) {
-        String[] elements = content.split(Pattern.quote("|"));
-        return elements.length != 4;
-        /* Fisrt field can have a different format in according to external tool plugged.
-        if (elements.length < 4) return true;
-        String id = elements[0].trim();
-        return (!id.matches("[0-9]{14}"));
-        */
-    }
-
-    /**
-     * Encode a string in UTF-8
-     *
-     * @param in String to encode
-     * @return encoded String
-     */
-    private String stringEncode(String in) {
-        return new String(in.getBytes(), StandardCharsets.UTF_8);
-    }
 
 }

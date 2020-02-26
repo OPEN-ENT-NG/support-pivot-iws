@@ -1,132 +1,79 @@
 package fr.openent.supportpivot.model.ticket;
 
-import fr.openent.supportpivot.constants.JiraConstants;
 import fr.openent.supportpivot.managers.ConfigManager;
-import io.vertx.core.json.JsonArray;
+import fr.openent.supportpivot.services.JiraService;
+import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
 
-import java.text.ParseException;
-import java.util.Date;
-import java.util.LinkedList;
-
-public class JiraTicket implements Ticket {
-
-    private String title;
-    private String academieGlpi;
-    private String content;
-    private Integer priority;
-    private String type;
-    private String status;
-    private Date date;
-    private String attributed;
-    private String users;
-
-    private JsonObject jsonTicket = new JsonObject();
+public class JiraTicket extends JsonObject {
 
 
-    private LinkedList<String> followUps = new LinkedList<String>();
-    private LinkedList<String> documents = new LinkedList<String>();
+    private static final String PROJECT_FIELDNAME= "project";
+    private static final String PROJECT_KEY_FIELDNAME = "key";
+    private static final String PROJET_KEY_VALUE = ConfigManager.getInstance().getJiraProjectKey();
 
-    public JiraTicket() {
-        this.setField();
-        this.setProjectKey();
+    private static final String SUMMARY_FIELDNAME = "summary";
+    private static final String DESCRITPION_FIELDNAME = "description";
+    private static final String TYPE_FIELDNAME = "issuetype";
+    private static final String LABELS_FIELDNAME = "labels";
+    private static final String PRIORITY_FIELDNAME = "priority";
+    private static final String CREATOR_CONFIGKEY = "creator";
+
+    private static final JsonObject CUSTOMFIELD_FIELDNAMES = ConfigManager.getInstance().getJiraCustomFields();
+    private static final String ID_ENT_CF_CONFIGKEY = "id_ent";
+    private static final String ID_IWS_CF_CONFIGKEY = "id_iws";
+    private static final String STATUT_ENT_CF_CONFIGKEY = "status_ent";
+    private static final String STATUT_IWS_CF_CONFIGKEY = "status_iws";
+    private static final String RESOLUTION_ENT_CF_CONFIGKEY = "resolution_ent";
+    private static final String RESOLUTION_IWS_CF_CONFIGKEY = "resolution_iws";
+    private static final String RESPONSE_TECHNICAL_CF_CONFIGKEY = "response_technical";
+
+    private JsonObject ticket = new JsonObject();
+
+    public JsonObject getJiraTicket(){
+        return ticket;
     }
 
-    public JsonObject getField() {
-        return jsonTicket.getJsonObject(JiraConstants.FIELDS);
+    public JiraTicket(){
+        ticket.put("fields", new JsonObject().put(PROJECT_FIELDNAME, new JsonObject()
+                .put(PROJECT_KEY_FIELDNAME, PROJET_KEY_VALUE)));
     }
 
-    public JsonObject getJsonTicket() {
-        return this.jsonTicket;
+    public JiraTicket(PivotTicket pivotTicket) {
+        super();
+        addFields(SUMMARY_FIELDNAME, pivotTicket.getTitle());
+        addFields(DESCRITPION_FIELDNAME, pivotTicket.getContent());
+        addFields(SUMMARY_FIELDNAME, pivotTicket.getTitle());
+        addFields(SUMMARY_FIELDNAME, pivotTicket.getTitle());
     }
 
-    @Override
-    public String getTitle() {
-        return title;
+    private void addFields(String key, Object value){
+        if(value!= null && key != null){
+            ticket.getJsonObject("fields").put(key, value);
+        }
     }
 
-    @Override
-    public String getCollectivity() {
-        return ConfigManager.getInstance().getCollectivity();
-    }
 
-    @Override
-    public String getAcademy() {
-        return academieGlpi;
-    }
+/*
 
-    @Override
-    public String getUsers() {
-        return users;
-    }
+    jsonJiraTicket.put("fields", new JsonObject()
+                .put("project", new JsonObject()
+                        .put("key", JIRA_PROJECT_NAME))
+            .put("summary", jsonPivotIn.getString(TITLE_FIELD))
+            .put("description", jsonPivotIn.getString(DESCRIPTION_FIELD))
+            .put("issuetype", new JsonObject()
+                        .put("name", ticketType))
+            .put("labels", jsonPivotIn.getJsonArray(MODULES_FIELD))
+            .put(JIRA_FIELD.getString("id_ent"), jsonPivotIn.getString(ID_FIELD))
+            .put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDIWS_FIELD))
+            .put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD))
+            .put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD))
+            .put(JIRA_FIELD.getString("creation"), jsonPivotIn.getString(DATE_CREA_FIELD))
+            .put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESO_FIELD))
+            .put(JIRA_FIELD.getString("resolution_iws"), jsonPivotIn.getString(DATE_RESOIWS_FIELD))
+            .put(JIRA_FIELD.getString("creator"), jsonPivotIn.getString(CREATOR_FIELD))
+            .put("priority", new JsonObject()
+                        .put("name", currentPriority)));
 
-    @Override
-    public String getStatus() {
-        return status;
-    }
-
-    @Override
-    public String getContent() {
-        return content;
-    }
-
-    @Override
-    public Integer getPriority() {
-        return priority;
-    }
-
-    @Override
-    public String getType() {
-        return type;
-    }
-
-    @Override
-    public JsonArray getComments() {
-        return null;
-    }
-
-    @Override
-    public JsonArray getPjs() {
-        return null;
-    }
-
-    @Override
-    public String getCreatedAt() {
-        return null;
-    }
-
-    @Override
-    public Date getSolvedAt() throws ParseException {
-        return null;
-    }
-
-    public Date getDate() {
-        return date;
-    }
-
-    @Override
-    public String getAttributed() {
-        return attributed;
-    }
-
-    /*
-     * SETTERS
-     */
-    private void setField() {
-        jsonTicket.put(JiraConstants.FIELDS, new JsonObject());
-    }
-
-    private void setProjectKey() {
-        this.getField().put(JiraConstants.PROJECT, new JsonObject()
-                .put(JiraConstants.PROJECT_KEY, ConfigManager.getInstance().getJiraProjectKey()));
-    }
-
-    public void setTitle(String title) {
-         this.getField().put(JiraConstants.TITLE_FIELD, title);
-    }
-
-    public void setContent(String content) {
-        this.getField().put(JiraConstants.DESCRIPTION_FIELD, content);
-    }
-
+ */
 }

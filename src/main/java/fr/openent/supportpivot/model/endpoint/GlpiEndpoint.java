@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 
-class GlpiEndpoint implements Endpoint {
+class GlpiEndpoint extends  AbstractEndpoint {
 
     private  static final String PREFIX_GLPICOMMENTID = "glpi_";
 
@@ -272,11 +272,11 @@ class GlpiEndpoint implements Endpoint {
             List<PivotTicket> pivotTickets = new ArrayList<>();
             CompositeFuture.join(futures).setHandler(event -> {
                 if (event.succeeded()) {
-                    futures.forEach(future -> {
+                    for (Future future : futures)  {
                         if (future.succeeded() && future.result() != null) {
                             pivotTickets.add((PivotTicket) future.result());
                         }
-                    });
+                    }
                     handler.handle(Future.succeededFuture(pivotTickets));
                 } else {
                     handler.handle(Future.failedFuture(event.cause().getMessage()));

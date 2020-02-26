@@ -7,7 +7,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class PivotTicket implements Ticket {
+public class PivotTicket {
 
     public final static String IDEXTERNAL_FIELD = "id_externe";
     @Deprecated
@@ -81,52 +81,42 @@ public class PivotTicket implements Ticket {
     }
 
 
-    @Override
     public String getTitle() {
         return jsonTicket.getString(TITLE_FIELD);
     }
 
-    @Override
     public String getCollectivity() {
         return jsonTicket.getString(COLLECTIVITY_FIELD);
     }
 
-    @Override
     public String getAcademy() {
         return jsonTicket.getString(ACADEMY_FIELD);
     }
 
-    @Override
     public String getUsers() {
         return jsonTicket.getString(CREATOR_FIELD);
     }
 
-    @Override
     public String getContent() {
         return jsonTicket.getString(DESCRIPTION_FIELD);
     }
 
-    @Override
     public String getStatus() {
         return jsonTicket.getString(STATUSENT_FIELD);
     }
 
-    @Override
     public Integer getPriority() {
         return Integer.parseInt(jsonTicket.getString(PRIORITY_FIELD));
     }
 
-    @Override
     public String getType() {
         return jsonTicket.getString(TICKETTYPE_FIELD);
     }
 
-    @Override
     public JsonArray getComments() {
         return this.jsonTicket.getJsonArray(COMM_FIELD);
     }
 
-    @Override
     public JsonArray getPjs() { return this.jsonTicket.getJsonArray(ATTACHMENT_FIELD); }
 
     /*#### DATES ####*/
@@ -147,7 +137,6 @@ public class PivotTicket implements Ticket {
     }
 
 
-    @Override
     public String getAttributed() {
         return jsonTicket.getString(ATTRIBUTION_FIELD);
     }
@@ -198,12 +187,13 @@ public class PivotTicket implements Ticket {
         jsonTicket.put(CREATOR_FIELD, creator.trim());
     }
 
-    public void setJsonObject(JsonObject ticket) {
+    public PivotTicket setJsonObject(JsonObject ticket) {
         if (ticket != null) {
             this.jsonTicket = ticket;
             this.initComments();
             this.initPjs();
         }
+        return this;
     }
 
     public void setId(String id) {

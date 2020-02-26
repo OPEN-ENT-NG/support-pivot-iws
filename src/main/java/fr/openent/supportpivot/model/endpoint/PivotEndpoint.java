@@ -8,13 +8,12 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
-import java.util.List;
 
 import static fr.wseduc.webutils.Server.getEventBus;
 import static fr.wseduc.webutils.Utils.handlerToAsyncHandler;
 
 
-class PivotEndpoint implements Endpoint {
+class PivotEndpoint extends  AbstractEndpoint {
 
     private EventBus eventBus;
 
@@ -24,9 +23,6 @@ class PivotEndpoint implements Endpoint {
         this.eventBus = getEventBus(vertx);
     }
 
-    @Override
-    public void trigger(JsonObject data, Handler<AsyncResult<List<PivotTicket>>> handler) {
-    }
 
     @Override
     public void process(JsonObject ticketData, Handler<AsyncResult<PivotTicket>> handler) {

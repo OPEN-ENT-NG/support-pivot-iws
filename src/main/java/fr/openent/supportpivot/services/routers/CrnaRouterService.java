@@ -1,24 +1,22 @@
 package fr.openent.supportpivot.services.routers;
 
 import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
-import fr.openent.supportpivot.deprecatedservices.DefaultJiraServiceImpl;
 import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.model.endpoint.Endpoint;
 import fr.openent.supportpivot.model.endpoint.EndpointFactory;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
-import fr.openent.supportpivot.services.GlpiService;
-import fr.openent.supportpivot.services.HttpClientService;
-import fr.openent.supportpivot.services.MongoService;
-import fr.openent.supportpivot.services.RouterService;
+import fr.openent.supportpivot.services.*;
+import fr.wseduc.cron.CronTrigger;
 import io.vertx.core.*;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CrnaRouterService implements RouterService {
+public class CrnaRouterService extends AbstractRouterService {
 
     private Endpoint glpiEndpoint;
     private Endpoint jiraEndpoint;
@@ -28,13 +26,20 @@ public class CrnaRouterService implements RouterService {
     protected static final Logger log = LoggerFactory.getLogger(CrnaRouterService.class);
 
 
-    public CrnaRouterService(HttpClientService httpClientService, DefaultDemandeServiceImpl demandeService, DefaultJiraServiceImpl jiraService, GlpiService glpiService, MongoService mongoService, Vertx vertx) {
-        EndpointFactory endpointFactory = new EndpointFactory(httpClientService, demandeService, jiraService, glpiService, vertx);
+    public CrnaRouterService(HttpClientService httpClientService, JiraService jiraService, GlpiService glpiService, MongoService mongoService, Vertx vertx) {
         this.mongoService = mongoService;
 
-        glpiEndpoint = endpointFactory.getGlpiEndpoint();
-        jiraEndpoint = endpointFactory.getJiraEndpoint();
-        pivotEndpoint = endpointFactory.getPivotEndpoint();
+        glpiEndpoint = EndpointFactory.getGlpiEndpoint(glpiService);
+        jiraEndpoint = EndpointFactory.getJiraEndpoint(httpClientService, jiraService);
+        pivotEndpoint = EndpointFactory.getPivotEndpoint(vertx);
+
+        try {
+            ExternalSynchroTask syncLauncherTask = new ExternalSynchroTask(vertx.eventBus());
+            new CronTrigger(vertx, ConfigManager.getInstance().getSynchroCronDate()).schedule(syncLauncherTask);
+        } catch (ParseException e) {
+            log.error("Cron Synchro GLPI support pivot. synchro-cron : " + ConfigManager.getInstance().getSynchroCronDate(), e);
+        }
+
     }
 
     @Override
