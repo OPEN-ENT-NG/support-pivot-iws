@@ -64,8 +64,8 @@ public class PivotTicket {
     public String getJiraId() {
         return jsonTicket.getString(IDJIRA_FIELD, null);
     }
-
-    public String getExternalId() { return jsonTicket.getString(IDIWS_FIELD, null); }
+    
+    public String getExternalId() { return jsonTicket.getString(IDEXTERNAL_FIELD, jsonTicket.getString(IDIWS_FIELD, null)); }
 
 
 
