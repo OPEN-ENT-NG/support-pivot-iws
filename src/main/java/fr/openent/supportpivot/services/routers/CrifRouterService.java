@@ -1,14 +1,14 @@
 package fr.openent.supportpivot.services.routers;
 
+import fr.openent.supportpivot.constants.JiraConstants;
 import fr.openent.supportpivot.constants.PivotConstants.SOURCES;
-import fr.openent.supportpivot.deprecatedservices.DefaultDemandeServiceImpl;
+import fr.openent.supportpivot.helpers.JsonObjectSafe;
 import fr.openent.supportpivot.model.endpoint.EndpointFactory;
-import fr.openent.supportpivot.model.endpoint.JiraEndpoint;
+import fr.openent.supportpivot.model.endpoint.jira.JiraEndpoint;
 import fr.openent.supportpivot.model.endpoint.LdeEndPoint;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
 import fr.openent.supportpivot.services.HttpClientService;
 import fr.openent.supportpivot.services.JiraService;
-import fr.openent.supportpivot.services.JiraServiceImpl;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
@@ -68,19 +68,19 @@ public class CrifRouterService extends AbstractRouterService {
         }
     }
 
+    //todo split in two functions ?
     @Override
     public void readTickets(String source, JsonObject data, Handler<AsyncResult<JsonArray>> handler) {
         if (SOURCES.LDE.equals(source)) {
-            if (data == null) {
-                data = new JsonObject();
-                data.put(jiraEndpoint.ATTRIBUTION_FILTERNAME, "LDE");
-                jiraEndpoint.trigger(data, jiraEndpointTriggerResult -> {
-                    if (jiraEndpointTriggerResult.succeeded()) {
-                        handler.handle(Future.succeededFuture(convertListPivotTicketToJsonObject(jiraEndpointTriggerResult.result())));
+            String type = data == null ? "list" : data.getString("type", "");
+            String minDate = data == null ? null : data.getString("date");
+            if (type.equals("list")) {
+                getTicketListFromJira( minDate, jiraResult -> {
+                    if(jiraResult.failed()) {
+                        handler.handle(Future.failedFuture(jiraResult.cause()));
                     } else {
-                        handler.handle(Future.failedFuture(jiraEndpointTriggerResult.cause()));
+                        ldeEndpoint.prepareJsonList(jiraResult.result(), handler);
                     }
-
                 });
             } else {
                 ldeEndpoint.process(data, ldeEndpointProcessResult -> {
@@ -89,9 +89,9 @@ public class CrifRouterService extends AbstractRouterService {
                         jiraEndpoint.process(pivotTicket, jiraEndpointProcessResult -> {
                             if (jiraEndpointProcessResult.succeeded()) {
                                 PivotTicket pivotFormatTicket = jiraEndpointProcessResult.result();
-                                ldeEndpoint.send(pivotFormatTicket, ldeFormatTicketResult -> {    //TODO ici cette méthode devrait servir de conversion mais le type de retour n'est pas bon
+                                ldeEndpoint.sendBack(pivotFormatTicket, ldeFormatTicketResult -> {    //TODO ici cette méthode devrait servir de conversion mais le type de retour n'est pas bon
                                     if (ldeFormatTicketResult.succeeded()) {
-                                        handler.handle(Future.succeededFuture(new JsonArray().add(ldeFormatTicketResult.result().getJsonTicket())));
+                                        handler.handle(Future.succeededFuture(new JsonArray().add(ldeFormatTicketResult.result())));
                                     } else {
                                         handler.handle(Future.failedFuture(ldeFormatTicketResult.cause()));
                                     }
@@ -110,12 +110,11 @@ public class CrifRouterService extends AbstractRouterService {
         }
     }
 
-    private JsonArray convertListPivotTicketToJsonObject(List<PivotTicket> pivotTickets) {
-        JsonArray jsonPivotTickets = new JsonArray();
-        for (PivotTicket pivotTicket : pivotTickets) {
-            jsonPivotTickets.add(pivotTicket.getJsonTicket());
-        }
-        return jsonPivotTickets;
+    private void getTicketListFromJira(String minDate, Handler<AsyncResult<List<PivotTicket>>> handler) {
+        JsonObjectSafe data = new JsonObjectSafe();
+        data.put(JiraConstants.ATTRIBUTION_FILTERNAME, JiraConstants.ATTRIBUTION_FILTER_LDE);
+        data.putSafe(JiraConstants.ATTRIBUTION_FILTER_DATE, minDate);
+        jiraEndpoint.trigger(data, handler);
     }
 
 }

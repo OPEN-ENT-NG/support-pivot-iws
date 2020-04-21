@@ -1,6 +1,7 @@
 package fr.openent.supportpivot.controllers;
 
 import fr.openent.supportpivot.constants.PivotConstants;
+import fr.openent.supportpivot.helpers.JsonObjectSafe;
 import fr.openent.supportpivot.managers.ServiceManager;
 import fr.openent.supportpivot.services.RouterService;
 import fr.wseduc.rs.Get;
@@ -26,7 +27,7 @@ import java.util.Map;
  */
 
 public class LdeController extends ControllerHelper {
-    private static String SOURCE = PivotConstants.SOURCES.LDE.toString();
+    private final static String SOURCE_LDE = PivotConstants.SOURCES.LDE.toString();
     private RouterService routerService;
 
     protected static final Logger log = LoggerFactory.getLogger(LdeController.class);
@@ -36,14 +37,17 @@ public class LdeController extends ControllerHelper {
                      Map<String, SecuredAction> securedActions) {
 
         super.init(vertx, config, rm, securedActions);
-        ServiceManager serviceManager = ServiceManager.getInstance();
-        this.routerService = serviceManager.getRouteurService();
+        this.routerService = ServiceManager.getInstance().getRouteurService();
     }
 
     @Get("/lde/tickets")
     @fr.wseduc.security.SecuredAction(value = "", type = ActionType.AUTHENTICATED)
     public void getListeTicketsLDE(final HttpServerRequest request) {
-        routerService.readTickets(SOURCE, null, event -> {
+        String date = request.params().get("date");
+        JsonObjectSafe data = new JsonObjectSafe();
+        data.put("type", "list");
+        data.putSafe("date", date);
+        routerService.readTickets(SOURCE_LDE, data, event -> {
             if (event.succeeded()) {
                 Renders.renderJson(request, event.result());
             } else {
@@ -58,8 +62,10 @@ public class LdeController extends ControllerHelper {
     public void getTicketLDE(final HttpServerRequest request) {
         String id_param_value = request.params().get("id");
         //router trigger ( src = lde + idLDE )
-        JsonObject data = new JsonObject().put("idjira", id_param_value);
-        routerService.readTickets(SOURCE, data, event -> {
+        JsonObject data = new JsonObject()
+                .put("idjira", id_param_value)
+                .put("type", "ticket");
+        routerService.readTickets(SOURCE_LDE, data, event -> {
             if (event.succeeded()) {
                 Renders.renderJson(request, event.result().getJsonObject(0));
             } else {
@@ -72,7 +78,7 @@ public class LdeController extends ControllerHelper {
     @Put("/lde/ticket")
     @fr.wseduc.security.SecuredAction(value = "", type = ActionType.AUTHENTICATED)
     public void putTicketLDE(final HttpServerRequest request) {
-        RequestUtils.bodyToJson(request, body -> routerService.processTicket(SOURCE, body, event -> {
+        RequestUtils.bodyToJson(request, body -> routerService.processTicket(SOURCE_LDE, body, event -> {
             if (event.succeeded()) {
                 Renders.renderJson(request, event.result());
             } else {

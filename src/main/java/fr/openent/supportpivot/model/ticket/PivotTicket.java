@@ -32,6 +32,8 @@ public class PivotTicket {
     public final static String STATUSENT_FIELD = "statut_ent";
     public final static String STATUSJIRA_FIELD = "statut_jira";
     public final static String DATE_CREA_FIELD = "date_creation";
+    public final static String RAWDATE_CREA_FIELD = "creation";
+    public final static String RAWDATE_UPDATE_FIELD = "maj";
     @Deprecated
     public final static String DATE_RESOIWS_FIELD = "date_resolution_iws";
     public final static String DATE_RESOEXTERNAL_FIELD = "date_resolution_externe";
@@ -40,6 +42,7 @@ public class PivotTicket {
     public final static String TECHNICAL_RESP_FIELD= "reponse_technique";
     public final static String CLIENT_RESP_FIELD= "reponse_client";
     public final static String ATTRIBUTION_FIELD = "attribution";
+    public final static String UAI_FIELD = "uai";
 
     private JsonObject jsonTicket = new JsonObject();
     private SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -119,10 +122,20 @@ public class PivotTicket {
 
     public JsonArray getPjs() { return this.jsonTicket.getJsonArray(ATTACHMENT_FIELD); }
 
+    public String getUai() { return this.jsonTicket.getString(UAI_FIELD); }
+
     /*#### DATES ####*/
 
     public String getCreatedAt() {
         return jsonTicket.getString(DATE_CREA_FIELD);
+    }
+
+    public String getRawCreatedAt() {
+        return jsonTicket.getString(RAWDATE_CREA_FIELD);
+    }
+
+    public String getRawUpdatedAt() {
+        return jsonTicket.getString(RAWDATE_UPDATE_FIELD);
     }
 
     public Date getSolvedAt() throws ParseException {

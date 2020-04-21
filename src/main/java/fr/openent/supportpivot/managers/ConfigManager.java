@@ -11,7 +11,9 @@ import java.net.URL;
 
 public class ConfigManager {
 
-    private static JsonObject config;
+    private static ConfigManager instance = null;
+
+    private static JsonObject rawConfig;
 
     private final String collectivity;
     private final String mongoCollection;
@@ -45,15 +47,15 @@ public class ConfigManager {
 
     private ConfigManager() {
 
-        collectivity = config.getString("collectivity");
+        collectivity = rawConfig.getString("collectivity");
         if(collectivity.isEmpty()) {
             log.warn("Default collectivity absent from configuration");
         }
-        mongoCollection = config.getString("mongo-collection", "support.demandes");
-        proxyHost = config.getString("proxy-host", null);
-        proxyPort = config.getInteger("proxy-port");
+        mongoCollection = rawConfig.getString("mongo-collection", "support.demandes");
+        proxyHost = rawConfig.getString("proxy-host", null);
+        proxyPort = rawConfig.getInteger("proxy-port");
         //GLPI Configuration
-        JsonObject configGlpi = config.getJsonObject("glpi-endpoint");
+        JsonObject configGlpi = rawConfig.getJsonObject("glpi-endpoint");
         if(configGlpi != null){
             externalEndpointActivated = "GLPI";
             glpiHost = configGlpi.getString("host");
@@ -80,7 +82,7 @@ public class ConfigManager {
             glpiType = null;
             glpiLocation = null;
             synchroCronDate = null;
-            JsonObject configIws = config.getJsonObject("iws-endpoint");
+            JsonObject configIws = rawConfig.getJsonObject("iws-endpoint");
             if(configIws != null){
                 externalEndpointActivated = "IWS";
             } else {
@@ -93,13 +95,13 @@ public class ConfigManager {
 
 
         //JIRA configuration
-        jiraHost = config.getString("jira-host").trim() ;
+        jiraHost = rawConfig.getString("jira-host").trim() ;
         CheckUrlSyntax(jiraHost, "jira-host");
-        jiraBaseUri = config.getString("jira-base-uri");
-        jiraProjectKey = config.getString("jira-project-key");
-        jiraLogin = config.getString("jira-login");
-        jiraPassword = config.getString("jira-passwd");
-        jiraCustomFields = config.getJsonObject("jira-custom-fields");
+        jiraBaseUri = rawConfig.getString("jira-base-uri");
+        jiraProjectKey = rawConfig.getString("jira-project-key");
+        jiraLogin = rawConfig.getString("jira-login");
+        jiraPassword = rawConfig.getString("jira-passwd");
+        jiraCustomFields = rawConfig.getJsonObject("jira-custom-fields");
 
         if(jiraCustomFields.containsKey("id_external")) {
             jiraCustomFieldIdForExternalId = jiraCustomFields.getString("id_external");
@@ -107,8 +109,8 @@ public class ConfigManager {
             //For retro-compatibility
             jiraCustomFieldIdForExternalId = jiraCustomFields.getString("id_iws");
         }
-        jiraStatusMapping = config.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
-        jiraDefaultStatus = config.getJsonObject("jira-status-mapping").getString("statutsDefault");
+        jiraStatusMapping = rawConfig.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
+        jiraDefaultStatus = rawConfig.getJsonObject("jira-status-mapping").getString("statutsDefault");
 
 
     }
@@ -158,18 +160,13 @@ public class ConfigManager {
     public JsonObject getJiraStatusMapping() { return jiraStatusMapping; }
     public String getJiraDefaultStatus() { return jiraDefaultStatus; }
 
-
-    /** Holder */
-    private static class Holder {
-        private final static ConfigManager instance = new ConfigManager();
-    }
-
     public static void init(JsonObject configuration) {
-        config = configuration;
+        rawConfig = configuration;
+        instance = new ConfigManager();
     }
 
     public static ConfigManager getInstance() {
-        return Holder.instance;
+        return instance;
     }
 
 
