@@ -39,14 +39,14 @@ public class LdeEndPoint extends AbstractEndpoint {
     }
 
     public void sendBack(PivotTicket ticket, Handler<AsyncResult<JsonObject>> handler)  {
-        handler.handle(Future.succeededFuture(prepareJson(ticket)));
+        handler.handle(Future.succeededFuture(prepareJson(ticket, true)));
     }
 
-    private JsonObject prepareJson(PivotTicket pivotTicket) {
-        JsonObjectSafe ticket = new JsonObjectSafe();
+    private JsonObject prepareJson(PivotTicket pivotTicket, boolean isComplete) {
+        JsonObject ticket = isComplete ? pivotTicket.getJsonTicket() : new JsonObject();
         ticket.put(PivotTicket.IDJIRA_FIELD, pivotTicket.getJiraId());
-        ticket.putSafe(PivotTicket.IDEXTERNAL_FIELD, pivotTicket.getExternalId());
-        ticket.putSafe(PivotTicket.TITLE_FIELD, pivotTicket.getTitle());
+        if(pivotTicket.getExternalId() != null) ticket.put(PivotTicket.IDEXTERNAL_FIELD, pivotTicket.getExternalId());
+        if(pivotTicket.getTitle() != null) ticket.put(PivotTicket.TITLE_FIELD, pivotTicket.getTitle());
         DateTimeFormatter inFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         DateTimeFormatter outFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
         ZonedDateTime createdDate = inFormatter.parse(pivotTicket.getRawCreatedAt(), ZonedDateTime::from);
@@ -59,7 +59,7 @@ public class LdeEndPoint extends AbstractEndpoint {
     public void prepareJsonList(List<PivotTicket> pivotTickets, Handler<AsyncResult<JsonArray>> handler) {
         JsonArray jsonTickets = new JsonArray();
         for (PivotTicket pivotTicket : pivotTickets) {
-            jsonTickets.add(prepareJson(pivotTicket));
+            jsonTickets.add(prepareJson(pivotTicket, false));
         }
         handler.handle(Future.succeededFuture(jsonTickets));
     }
