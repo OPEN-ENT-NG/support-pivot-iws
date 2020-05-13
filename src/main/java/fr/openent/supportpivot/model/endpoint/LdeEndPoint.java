@@ -60,7 +60,7 @@ public class LdeEndPoint extends AbstractEndpoint {
             if(!(o instanceof JsonObject)) continue;
             JsonObject pj = (JsonObject)o;
             pj.put(PivotTicket.ATTACHMENT_CONTENT_FIELD,
-                    pj.getString(PivotTicket.ATTACHMENT_CONTENT_FIELD.replace("\r\n", "")));
+                    pj.getString(PivotTicket.ATTACHMENT_CONTENT_FIELD).replace("\r\n", ""));
             filteredPjs.add(pj);
         }
         ticket.put(PivotTicket.ATTACHMENT_FIELD, filteredPjs);
