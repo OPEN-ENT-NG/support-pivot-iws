@@ -53,6 +53,17 @@ public class LdeEndPoint extends AbstractEndpoint {
         ticket.put(PivotTicket.RAWDATE_CREA_FIELD, outFormatter.format(createdDate));
         ZonedDateTime updatedDate = inFormatter.parse(pivotTicket.getRawUpdatedAt(), ZonedDateTime::from);
         ticket.put(PivotTicket.RAWDATE_UPDATE_FIELD, outFormatter.format(updatedDate));
+
+        // Remove endlines from base64 before sending to LDE
+        JsonArray filteredPjs = new JsonArray();
+        for(Object o : pivotTicket.getPjs()) {
+            if(!(o instanceof JsonObject)) continue;
+            JsonObject pj = (JsonObject)o;
+            pj.put(PivotTicket.ATTACHMENT_CONTENT_FIELD,
+                    pj.getString(PivotTicket.ATTACHMENT_CONTENT_FIELD.replace("\r\n", "")));
+            filteredPjs.add(pj);
+        }
+        ticket.put(PivotTicket.ATTACHMENT_FIELD, filteredPjs);
         return ticket;
     }
 
