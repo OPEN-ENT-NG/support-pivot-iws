@@ -173,17 +173,11 @@ public class JiraServiceImpl implements JiraService {
      */
     public void sendToJIRA(final JsonObject jsonPivotIn, final Handler<Either<String, JsonObject>> handler) {
 
-        //ID_IWS is mandatory
-        if (!jsonPivotIn.containsKey(IDIWS_FIELD)
-                || jsonPivotIn.getString(IDIWS_FIELD).isEmpty()) {
-
-            handler.handle(new Either.Left<>("2;Mandatory Field " + IDIWS_FIELD));
+        //ID_EXTERNAL is mandatory
+        if (!jsonPivotIn.containsKey(IDEXTERNAL_FIELD)
+                || jsonPivotIn.getString(IDEXTERNAL_FIELD).isEmpty()) {
+            handler.handle(new Either.Left<>("2;Mandatory Field " + IDEXTERNAL_FIELD));
             return;
-        }
-
-        //TITLE  is mandatory : TITLE = ID_IWS if not present
-        if (!jsonPivotIn.containsKey(TITLE_FIELD) || jsonPivotIn.getString(TITLE_FIELD).isEmpty()) {
-            jsonPivotIn.put(TITLE_FIELD, jsonPivotIn.getString(IDIWS_FIELD));
         }
 
         if (jsonPivotIn.containsKey(IDJIRA_FIELD)
@@ -191,6 +185,10 @@ public class JiraServiceImpl implements JiraService {
             String jiraTicketId = jsonPivotIn.getString(IDJIRA_FIELD);
             updateJiraTicket(jsonPivotIn, jiraTicketId, handler);
         } else {
+            //TITLE  is mandatory : TITLE = ID_IWS if not present
+            if (!jsonPivotIn.containsKey(TITLE_FIELD) || jsonPivotIn.getString(TITLE_FIELD).isEmpty()) {
+                jsonPivotIn.put(TITLE_FIELD, jsonPivotIn.getString(IDIWS_FIELD));
+            }
             try {
                 this.createJiraTicket(jsonPivotIn, handler);
             } catch (Error e) {
@@ -484,13 +482,13 @@ public class JiraServiceImpl implements JiraService {
                                 if(jsonPivotIn.getString(IDIWS_FIELD)!=null)
                                     fields.put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDIWS_FIELD));
                                 if(jsonPivotIn.getString(IDEXTERNAL_FIELD)!=null)
-                                    fields.put(JIRA_FIELD.getString("id_iws"), jsonPivotIn.getString(IDEXTERNAL_FIELD));
+                                    fields.put(JIRA_FIELD.getString("id_externe"), jsonPivotIn.getString(IDEXTERNAL_FIELD));
                                 if(jsonPivotIn.getString(STATUSENT_FIELD)!=null)
                                     fields.put(JIRA_FIELD.getString("status_ent"), jsonPivotIn.getString(STATUSENT_FIELD));
                                 if(jsonPivotIn.getString(STATUSIWS_FIELD)!=null)
                                     fields.put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSIWS_FIELD));
                                 if(jsonPivotIn.getString(STATUSEXTERNAL_FIELD)!=null)
-                                    fields.put(JIRA_FIELD.getString("status_iws"), jsonPivotIn.getString(STATUSEXTERNAL_FIELD));
+                                    fields.put(JIRA_FIELD.getString("status_externe"), jsonPivotIn.getString(STATUSEXTERNAL_FIELD));
                                 if(jsonPivotIn.getString(DATE_RESO_FIELD)!=null)
                                     fields.put(JIRA_FIELD.getString("resolution_ent"), jsonPivotIn.getString(DATE_RESO_FIELD));
                                 if(jsonPivotIn.getString(DATE_RESOIWS_FIELD)!=null)

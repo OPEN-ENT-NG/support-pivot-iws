@@ -17,6 +17,8 @@ import io.vertx.core.json.JsonObject;
 
 import java.util.List;
 
+import static fr.openent.supportpivot.model.ticket.PivotTicket.IDJIRA_FIELD;
+
 public class CrifRouterService extends AbstractRouterService {
 
 
@@ -33,14 +35,18 @@ public class CrifRouterService extends AbstractRouterService {
     @Override
     public void dispatchTicket(String source, PivotTicket ticket, Handler<AsyncResult<PivotTicket>> handler) {
         if (SOURCES.LDE.equals(source)) {
-            jiraEndpoint.send(ticket, jiraEndpointSendResult -> {
-                if (jiraEndpointSendResult.succeeded()) {
-                    handler.handle(Future.succeededFuture(jiraEndpointSendResult.result()));
-                } else {
-                    handler.handle(Future.failedFuture(jiraEndpointSendResult.cause()));
-                }
+            if(!ticket.getJiraId().isEmpty()) {
+                jiraEndpoint.send(ticket, jiraEndpointSendResult -> {
+                    if (jiraEndpointSendResult.succeeded()) {
+                        handler.handle(Future.succeededFuture(jiraEndpointSendResult.result()));
+                    } else {
+                        handler.handle(Future.failedFuture(jiraEndpointSendResult.cause()));
+                    }
 
-            });
+                });
+            } else {
+                handler.handle(Future.failedFuture(IDJIRA_FIELD + " is mandatory for IDF router."));
+            }
         } else {
             handler.handle(Future.failedFuture(source + " is an unsupported value for IDF router."));
         }

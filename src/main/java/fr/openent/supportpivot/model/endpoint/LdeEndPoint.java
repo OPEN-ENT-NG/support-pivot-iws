@@ -1,6 +1,5 @@
 package fr.openent.supportpivot.model.endpoint;
 
-import fr.openent.supportpivot.helpers.JsonObjectSafe;
 import fr.openent.supportpivot.model.ticket.PivotTicket;
 import fr.wseduc.webutils.Either;
 import io.vertx.core.AsyncResult;
