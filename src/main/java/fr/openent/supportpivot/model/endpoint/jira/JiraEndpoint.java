@@ -349,6 +349,7 @@ public class JiraEndpoint extends AbstractEndpoint {
 
             jsonPivot.putSafe(STATUSENT_FIELD, fields.getString(JIRA_FIELD.getString("status_ent")));
             jsonPivot.putSafe(STATUSIWS_FIELD, fields.getString(JIRA_FIELD.getString("status_iws")));
+            jsonPivot.putSafe(STATUSEXTERNAL_FIELD, fields.getString(JIRA_FIELD.getString("status_externe")));
 
             String currentStatus = fields.getJsonObject("status", new JsonObject()).getString("name", "");
 

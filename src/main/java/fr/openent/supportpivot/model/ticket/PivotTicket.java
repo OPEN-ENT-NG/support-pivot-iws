@@ -26,7 +26,7 @@ public class PivotTicket {
     public final static String ATTACHMENT_FIELD = "pj";
     public final static String ATTACHMENT_NAME_FIELD = "nom";
     public final static String ATTACHMENT_CONTENT_FIELD = "contenu";
-    public final static String STATUSEXTERNAL_FIELD = "statut_external";
+    public final static String STATUSEXTERNAL_FIELD = "statut_externe";
     @Deprecated
     public final static String STATUSIWS_FIELD = "statut_iws";
     public final static String STATUSENT_FIELD = "statut_ent";
