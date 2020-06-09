@@ -47,7 +47,7 @@ public class LdeEndPoint extends AbstractEndpoint {
         if(pivotTicket.getExternalId() != null) ticket.put(PivotTicket.IDEXTERNAL_FIELD, pivotTicket.getExternalId());
         if(pivotTicket.getTitle() != null) ticket.put(PivotTicket.TITLE_FIELD, pivotTicket.getTitle());
         DateTimeFormatter inFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-        DateTimeFormatter outFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        DateTimeFormatter outFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         ZonedDateTime createdDate = inFormatter.parse(pivotTicket.getRawCreatedAt(), ZonedDateTime::from);
         ticket.put(PivotTicket.RAWDATE_CREA_FIELD, outFormatter.format(createdDate));
         ZonedDateTime updatedDate = inFormatter.parse(pivotTicket.getRawUpdatedAt(), ZonedDateTime::from);
