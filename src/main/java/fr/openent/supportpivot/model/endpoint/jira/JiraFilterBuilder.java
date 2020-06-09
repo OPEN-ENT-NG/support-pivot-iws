@@ -18,6 +18,34 @@ public class JiraFilterBuilder extends JsonObject {
         if (assignee != null) jqlQeryString.append(addFilter(("assignee = " + assignee)));
     }
 
+    public void addAssigneeOrCustomFieldFilter(String assignee, String customFielId, String customFieldValue) {
+        StringBuilder tmpFilter = new StringBuilder();
+        if (assignee != null) {
+            tmpFilter.append("assignee = ").append(assignee);
+
+        }
+        if(customFielId != null && !customFielId.isEmpty()) {
+            if(!tmpFilter.toString().isEmpty()) {
+                tmpFilter.append(" or ");
+            }
+            tmpFilter.append(getCustomFieldTemplate(customFielId, customFieldValue));
+        }
+        if(!tmpFilter.toString().isEmpty()) {
+            tmpFilter.insert(0, '(');
+            tmpFilter.append(')');
+            jqlQeryString.append(tmpFilter.toString());
+        }
+    }
+
+    private String getCustomFieldTemplate(String id, String value) {
+        String cf = "cf[" + id + "]";
+        if(value != null) {
+            return cf + " ~ " + value;
+        } else {
+            return cf + " is EMPTY";
+        }
+    }
+
     public void addMinUpdateDate(String date) {
         if(date != null && !date.isEmpty()) {
             // format date
@@ -27,7 +55,7 @@ public class JiraFilterBuilder extends JsonObject {
 
     public void addCustomfieldFilter(String customfieldid, String value) {
         if (customfieldid != null && value != null)
-            jqlQeryString.append(addFilter(("cf[" + customfieldid + "] ~ " + value)));
+            jqlQeryString.append(addFilter(getCustomFieldTemplate(customfieldid, value)));
     }
 
     public void onlyIds() {

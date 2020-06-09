@@ -8,6 +8,8 @@ import java.util.Map;
 public class JiraConstants {
 
     public final static String ATTRIBUTION_FILTERNAME = "Attribution";
+    public final static String ATTRIBUTION_FILTER_CUSTOMFIELD = "custom_field";
+    public final static String ATTRIBUTION_FILTER_CF_ID = "cf_id";
     public final static String ATTRIBUTION_FILTER_LDE = "LDE";
     public final static String ATTRIBUTION_FILTER_DATE = "Updated";
 
@@ -25,6 +27,7 @@ public class JiraConstants {
     public final static String IDENT_FIELD = "id_ent";
     public final static String IDJIRA_FIELD = "id_jira";
     public final static String IDGLPI_FIELD = "id_glpi";
+    public final static String IDEXTERNAL_FIELD = "id_externe";
     public final static String COLLECTIVITY_FIELD = "collectivite";
     public final static String ACADEMY_FIELD = "academie";
     public final static String CREATOR_FIELD = "demandeur";

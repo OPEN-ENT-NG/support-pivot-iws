@@ -37,6 +37,7 @@ import java.util.regex.Pattern;
 
 import static fr.openent.supportpivot.constants.JiraConstants.ATTRIBUTION_FILTERNAME;
 import static fr.openent.supportpivot.constants.JiraConstants.ATTRIBUTION_FILTER_DATE;
+import static fr.openent.supportpivot.constants.JiraConstants.ATTRIBUTION_FILTER_CUSTOMFIELD;
 import static fr.openent.supportpivot.constants.PivotConstants.*;
 import static fr.openent.supportpivot.model.ticket.PivotTicket.*;
 
@@ -85,13 +86,20 @@ public class JiraEndpoint extends AbstractEndpoint {
 
     private URI prepareSearchRequest(JsonObject data) {
         JiraFilterBuilder filter = new JiraFilterBuilder();
+        JsonObject JIRA_FIELDS = ConfigManager.getInstance().getJiraCustomFields();
         if (data.containsKey(ATTRIBUTION_FILTERNAME)) {
-            filter.addAssigneeFilter(data.getString(ATTRIBUTION_FILTERNAME));
+            String customFieldFilter = data.getString(ATTRIBUTION_FILTER_CUSTOMFIELD, "");
+            if(customFieldFilter.isEmpty()) {
+                filter.addAssigneeFilter(data.getString(ATTRIBUTION_FILTERNAME));
+            } else {
+                String customFieldId = JIRA_FIELDS.getString(customFieldFilter);
+                filter.addAssigneeOrCustomFieldFilter(  data.getString(ATTRIBUTION_FILTERNAME),
+                                                        customFieldId, null);
+            }
         }
         if(data.containsKey(ATTRIBUTION_FILTER_DATE)) {
             filter.addMinUpdateDate(data.getString(ATTRIBUTION_FILTER_DATE));
         }
-        JsonObject JIRA_FIELDS = ConfigManager.getInstance().getJiraCustomFields();
         filter.onlyIds();
         filter.addFieldDates();
         filter.addFields(JIRA_FIELDS.getString("creation", ""));

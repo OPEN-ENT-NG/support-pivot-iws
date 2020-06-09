@@ -1,6 +1,7 @@
 package fr.openent.supportpivot.services.routers;
 
 import fr.openent.supportpivot.constants.JiraConstants;
+import fr.openent.supportpivot.constants.PivotConstants;
 import fr.openent.supportpivot.constants.PivotConstants.SOURCES;
 import fr.openent.supportpivot.helpers.JsonObjectSafe;
 import fr.openent.supportpivot.model.endpoint.EndpointFactory;
@@ -119,6 +120,7 @@ public class CrifRouterService extends AbstractRouterService {
     private void getTicketListFromJira(String minDate, Handler<AsyncResult<List<PivotTicket>>> handler) {
         JsonObjectSafe data = new JsonObjectSafe();
         data.put(JiraConstants.ATTRIBUTION_FILTERNAME, JiraConstants.ATTRIBUTION_FILTER_LDE);
+        data.put(JiraConstants.ATTRIBUTION_FILTER_CUSTOMFIELD, JiraConstants.IDEXTERNAL_FIELD);
         data.putSafe(JiraConstants.ATTRIBUTION_FILTER_DATE, minDate);
         jiraEndpoint.trigger(data, handler);
     }
