@@ -42,7 +42,7 @@ public class JiraFilterBuilder extends JsonObject {
         if(value != null) {
             return cf + " ~ " + value;
         } else {
-            return cf + " is EMPTY";
+            return cf + " is not EMPTY";
         }
     }
 
