@@ -1,5 +1,6 @@
 package fr.openent.supportpivot.model.endpoint.jira;
 
+import fr.openent.supportpivot.managers.ConfigManager;
 import io.vertx.core.json.JsonObject;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
@@ -18,13 +19,15 @@ public class JiraFilterBuilder extends JsonObject {
         if (assignee != null) jqlQeryString.append(addFilter(("assignee = " + assignee)));
     }
 
-    public void addAssigneeOrCustomFieldFilter(String assignee, String customFielId, String customFieldValue) {
+    public void addAssigneeOrCustomFieldFilter(String assignee, String customFielName, String customFieldValue) {
+
         StringBuilder tmpFilter = new StringBuilder();
         if (assignee != null) {
             tmpFilter.append("assignee = ").append(assignee);
 
         }
-        if(customFielId != null && !customFielId.isEmpty()) {
+        if(customFielName != null && !customFielName.isEmpty()) {
+            String customFielId = customFielName.replaceAll("customfield_", "");
             if(!tmpFilter.toString().isEmpty()) {
                 tmpFilter.append(" or ");
             }

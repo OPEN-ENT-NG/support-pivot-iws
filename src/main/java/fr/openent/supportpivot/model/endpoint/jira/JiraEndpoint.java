@@ -92,9 +92,9 @@ public class JiraEndpoint extends AbstractEndpoint {
             if(customFieldFilter.isEmpty()) {
                 filter.addAssigneeFilter(data.getString(ATTRIBUTION_FILTERNAME));
             } else {
-                String customFieldId = JIRA_FIELDS.getString(customFieldFilter);
+                String customFieldName = JIRA_FIELDS.getString(customFieldFilter);
                 filter.addAssigneeOrCustomFieldFilter(  data.getString(ATTRIBUTION_FILTERNAME),
-                                                        customFieldId, null);
+                                                        customFieldName, null);
             }
         }
         if(data.containsKey(ATTRIBUTION_FILTER_DATE)) {
