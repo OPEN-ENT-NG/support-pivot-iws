@@ -19,6 +19,7 @@
 package fr.openent.supportpivot.controllers;
 
 import fr.openent.supportpivot.deprecatedservices.DemandeService;
+import fr.openent.supportpivot.managers.ConfigManager;
 import fr.openent.supportpivot.managers.ServiceManager;
 import fr.openent.supportpivot.model.endpoint.Endpoint;
 import fr.openent.supportpivot.services.MongoService;
@@ -155,6 +156,12 @@ public class SupportPivotController extends ControllerHelper{
     public void getMongoInfos(final HttpServerRequest request) {
         final String mailTo = request.params().get("request");
         mongoService.getMongoInfos(mailTo, getDefaultResponseHandlerAsync(request));
+    }
+
+    @Get("config")
+    @SecuredAction("supportpivot.ws.config")
+    public void getConfig(final HttpServerRequest request) {
+        renderJson(request, ConfigManager.getInstance().getPublicConfig());
     }
 
     /**

@@ -8,12 +8,14 @@ import io.vertx.core.logging.LoggerFactory;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import org.apache.commons.lang3.StringUtils;
 
 public class ConfigManager {
 
     private static ConfigManager instance = null;
 
     private static JsonObject rawConfig;
+    private final JsonObject publicConfig;
 
     private final String collectivity;
     private final String mongoCollection;
@@ -47,6 +49,7 @@ public class ConfigManager {
 
     private ConfigManager() {
 
+        publicConfig = rawConfig.copy();
         collectivity = rawConfig.getString("collectivity");
         if(collectivity.isEmpty()) {
             log.warn("Default collectivity absent from configuration");
@@ -112,7 +115,17 @@ public class ConfigManager {
         jiraStatusMapping = rawConfig.getJsonObject("jira-status-mapping").getJsonObject("statutsJira");
         jiraDefaultStatus = rawConfig.getJsonObject("jira-status-mapping").getString("statutsDefault");
 
+        initPublicConfig();
+        log.info("SUPPORT-PIVOT CONFIGURATION : " + publicConfig.toString());
+    }
 
+    private void initPublicConfig() {
+        JsonObject configGlpi = rawConfig.getJsonObject("glpi-endpoint");
+        if(configGlpi != null){
+            configGlpi.put("password", hidePasswd(configGlpi.getString("password", "")));
+            publicConfig.put("glpi-endpoint", configGlpi);
+        }
+        publicConfig.put("jira-passwd", hidePasswd(rawConfig.getString("jira-passwd", "")));
     }
 
     private static void CheckUrlSyntax(String URLvalue, String parameterName) {
@@ -123,6 +136,17 @@ public class ConfigManager {
         }
     }
 
+    private String hidePasswd(String passwd) {
+        String newpwd;
+        if(passwd.length() < 8) {
+            newpwd = StringUtils.repeat("*", passwd.length());
+        } else {
+            newpwd = passwd.substring(0, 3) + StringUtils.repeat("*", passwd.length() - 3);
+        }
+        return newpwd;
+    }
+
+    public JsonObject getPublicConfig() { return publicConfig; }
 
     public String getCollectivity() { return collectivity; }
     public String getMongoCollection() { return mongoCollection; }
