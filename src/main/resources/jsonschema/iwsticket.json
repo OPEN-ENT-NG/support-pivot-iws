@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "id_iws": {
+      "type": "string"
+    },
+    "id_ent": {
+      "type": "string"
+    },
+    "id_jira": {
+      "type": "string"
+    },
+    "collectivite": {
+      "type": "string"
+    },
+    "academie": {
+      "type": "string"
+    },
+    "demandeur": {
+      "type": "string"
+    },
+    "type_demande": {
+      "type": "string"
+    },
+    "titre": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "priorite": {
+      "type": "string"
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "additionalProperties": false
+      }
+    },
+    "commentaires": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "additionalProperties": false
+      }
+    },
+    "pj": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "contenu": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "statut_iws": {
+      "type": "string"
+    },
+    "statut_ent": {
+      "type": "string"
+    },
+    "statut_jira": {
+      "type": "string"
+    },
+    "date_creation": {
+      "type": "string"
+    },
+    "date_resolution_iws": {
+      "type": "string"
+    },
+    "date_resolution_ent": {
+      "type": "string"
+    },
+    "date_resolution_jira": {
+      "type": "string"
+    },
+    "reponse_technique": {
+      "type": "string"
+    },
+    "reponse_client": {
+      "type": "string"
+    },
+    "attribution": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id_iws",
+    "collectivite",
+    "academie",
+    "demandeur",
+    "statut_iws",
+    "attribution"
+  ]
+}
