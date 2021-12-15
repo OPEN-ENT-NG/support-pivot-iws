@@ -1,0 +1,127 @@
+{
+    "name": "{{ supportPivotVersion }}",
+    "config": {
+        "main" : "fr.openent.supportpivot.Supportpivot",
+        "port" : 9595,
+        "app-name" : "Supportpivot",
+        "app-address" : "/supportpivot",
+        "app-icon" : "Supportpivot-large",
+        "host": "https://{{ host }}",
+        "ssl" : true,
+        "auto-redeploy": false,
+        "userbook-host": "https://{{ host }}",
+        "app-registry.port" : 8012,
+        "mode" : "prod",
+        "entcore.port" : 8009,
+        "publicConf": {
+            "xiti": {
+                "ID_SERVICE": {
+                    "default": ""
+                },
+                "LIBELLE_SERVICE": {
+                    "default": "PAGE_ENT"
+                }
+            }
+        },
+        "collectivity" : "{{ supportPivotCollectivity }}",
+        "academy" : "{{ supportPivotAcademy }}",
+        "default-attribution" : "{{ supportPivotDefAttribution }}",
+        "default-tickettype" : "{{ supportPivotDefTicketType }}",
+        "default-priority" : "{{ supportPivotDefTicketPriority }}",
+        {% if supportPivotExternalTools is defined %}
+            {% if supportPivotVersion >= "2.0.3" %}
+                {% if supportPivotExternalTools=="IWS" %}
+        "iws-endpoint": {
+            "mail-iws" : "{{ supportPivotIWSMail }}"
+        },
+        "mail-iws" : "{{ supportPivotIWSMail }}",
+                {% elif supportPivotExternalTools=="GLPI" %}
+        "glpi-endpoint": {
+            "host" : "{{ supportPivotGlpiHost }}",
+            "root-uri": "{{ supportPivotGlpiRootUri }}",
+            "login": "{{ supportPivotGlpiLogin }}",
+            "password": "{{ supportPivotGlpiPassword }}",
+            "supportcgi_username": "{{ supportPivotGlpiUsername }}",
+            "mapping": {
+                "category": {{ supportPivotGlpiCategoryMapping }},
+                "default_category": "{{ supportPivotGlpiDefaultCategory }}",
+                "type": {{ supportPivotGlpiTypeMapping }},
+                "default_type": "{{ supportPivotGlpiDefaultType }}",
+                "location": {{ supportPivotGlpiLocationMapping }}
+            },
+                    {% if supportPivotGlpiSynchroCron is defined %}
+            "synchro-cron": "{{ supportPivotGlpiSynchroCron }}"
+                    {% else %}
+            "synchro-cron": "0 0/10 * ? * * 2099"
+                    {% endif %}
+        },
+                {% endif %}
+            {% else %}
+                {% if supportPivotExternalTools=="IWS" %}
+        "mail-iws" : "{{ supportPivotIWSMail }}",
+                {% elif supportPivotDefAttribution == "GLPI" %}
+        "glpi": {
+            "host": "{{ supportPivotGlpiHost }}",
+            "root-uri": "{{ supportPivotGlpiRootUri }}",
+            "login": "{{ supportPivotGlpiLogin }}",
+            "password": "{{ supportPivotGlpiPassword }}",
+            "mapping": {
+                "category": {{ supportPivotGlpiCategoryMapping }},
+                "default_category": "{{ supportPivotGlpiDefaultCategory }}",
+                "type": {{ supportPivotGlpiTypeMapping }},
+                "default_type": "{{ supportPivotGlpiDefaultType }}",
+                "location": {{ supportPivotGlpiLocationMapping }}
+            }
+        },
+                {% endif %}
+            {% endif %}
+        {% endif %}
+        "jira-login" : "{{ supportPivotJIRALogin }}",
+        "jira-passwd" : "{{ supportPivotJIRAPwd }}",
+        "jira-host" : "{{ supportPivotJIRAHost }}",
+        "jira-url" : "/rest/api/2/issue/",
+        "jira-base-uri": "/rest/api/2/",
+        "jira-project-key" :  "{{ supportPivotJIRAProjectKey }}",
+        "jira-allowed-tickettype" :  {{ supportPivotJIRAAllowedTicketType }},
+        "jira-allowed-priority":  {{ supportPivotJIRAAllowedPriority }},
+        "jira-custom-fields" : {
+            "id_ent" : "{{ supportPivotCFIdEnt }}",
+            "id_iws" : "{{ supportPivotCFIdIws }}",
+            {% if supportPivotCFidExt is defined %}
+            "id_externe": "{{ supportPivotCFidExt }}",
+            {% endif %}
+            {% if supportPivotCFidExt is defined %}
+            "id_external": "{{ supportPivotCFidExt }}",
+            {% endif %}
+            {% if supportPivotCFidExternal is defined %}
+            "id_external": "{{ supportPivotCFidExternal }}",
+            {% endif %}
+            "status_ent" : "{{ supportPivotCFStEnt }}",
+            "status_iws" : "{{ supportPivotCFStIws }}",
+            {% if supportPivotCFStExt is defined %}
+            "status_externe": "{{ supportPivotCFStExt }}",
+            {% endif %}
+            {% if supportPivotCFStExtal is defined %}
+            "status_external": "{{ supportPivotCFStExtal }}",
+            {% endif %}
+            "creation" : "{{ supportPivotCFCreateDate }}",
+            "resolution_ent" : "{{ supportPivotCFResEnt }}",
+            "resolution_iws" : "{{ supportPivotCFResIws }}",
+            {% if supportPivotCFResExtal is defined %}
+            "resolution_external": "{{ supportPivotCFResExtal }}",
+            {% endif %}
+            "creator" : "{{ supportPivotCFCreator }}",
+            {% if supportPivotCFUAI is defined %}
+            "uai": "{{ supportPivotCFUAI }}",
+            {% endif %}
+            {% if supportPivotVersion < "2.0.3" and supportPivotCFIdGlpi is defined %}
+            "id_glpi": "{{ supportPivotCFIdGlpi }}",
+            {% endif %}
+            "response_technical" : "{{ supportPivotCFTechResp }}"
+        },
+        "jira-status-mapping": {
+            "statutsJira": {{ supportPivotMappingStatus }},
+            "statutsDefault" : "{{ supportPivotDefaultStatus }}"
+        }
+    }
+}
