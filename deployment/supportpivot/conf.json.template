@@ -1,5 +1,5 @@
     {
-      "name": "fr.openent~supportpivot~1.2.0",
+      "name": "fr.openent~supportpivot~1.2.1",
       "config": {
         "main" : "fr.openent.supportpivot.Supportpivot",
         "port" : 9595,
