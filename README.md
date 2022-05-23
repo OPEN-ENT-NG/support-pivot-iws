@@ -2,7 +2,7 @@
 
 * Licence : [AGPL v3](http://www.gnu.org/licenses/agpl.txt) - Copyright Ville de Paris
 * Développeur(s) : CGI
-* Financeur(s) : Région Ville de Paris
+* Financeur(s) : Ville de Paris
 * Description : Application permettant l'automatisation de l'échange de tickets support entre l'application support de l'ENT, l'outil IWS, et JIRA. 
 
 ## Déployer dans ent-core
@@ -53,52 +53,69 @@ pré-requis : un mail sender doit être configuré sur la plateforme.
 
 Contenu du fichier deployment/support/conf.json.template :
 
-     {
-          "name": "fr.openent~supportpivot~1.0.1",
-          "config": {
-            "main" : "fr.openent.supportpivot.Supportpivot",
-            "port" : 9595,
-            "app-name" : "Supportpivot",
-        	"app-address" : "/supportpivot",
-        	"app-icon" : "Supportpivot-large",
-            "host": "${host}",
-            "ssl" : $ssl,
-            "auto-redeploy": false,
-            "userbook-host": "${host}",
-            "app-registry.port" : 8012,
-            "mode" : "${mode}",
-            "entcore.port" : 8009,
-    		"collectivity" : "${supportPivotCollectivity}",
-    		"academy" : "${supportPivotAcademy}",
-    		"default-attribution" : "${supportPivotDefAttribution}",
-    		"default-tickettype" : "${supportPivotDefTicketType}",
-    		"default-priority" : "${supportPivotDefTicketPriority}",
-            "mail-iws" : "${supportPivotIWSMail}",
-            "jira-login" : "${supportPivotJIRALogin}",
-            "jira-passwd" : "${supportPivotJIRAPwd}",
-            "jira-host" : "${supportPivotJIRAHost}",
-            "jira-url" : "/rest/api/2/issue/",
-            "jira-project-key" :  "${supportPivotJIRAProjectKey}",
-            "jira-allowed-tickettype" :  "${supportPivotJIRAAllowedTicketType}",
-            "jira-allowed-priority":  "${supportPivotJIRAAllowedPriority}",
-            "jira-custom-fields" : {
-                "id_ent" : "${supportPivotCFIdEnt}",
-                "id_iws" : "${supportPivotCFIdIws}",
-                "status_ent" : "${supportPivotCFStEnt}",
-                "status_iws" : "${supportPivotCFStIws}",
-                "creation" : "${supportPivotCFCreateDate}",
-                "resolution_ent" : "${supportPivotCFResEnt}",
-                "resolution_iws" : "${supportPivotCFResIws}",
-                "creator" : "${supportPivotCFCreator}",
-                "response_technical" : "${supportPivotCFTechResp}"
-            },
-        	"jira-status-mapping": {
-        		"statutsJira": ${supportPivotMappingStatus},
-        		"statutsDefault" : "${supportPivotDefaultStatus}"
-        	}
-          }
-        }
+<pre>
+ {
+  "config": {
+    ...
+    "collectivity" : "${supportPivotCollectivity}",
+    "academy" : "${supportPivotAcademy}",
+    "default-attribution" : "${supportPivotDefAttribution}",
+    "default-tickettype" : "${supportPivotDefTicketType}",
+    "default-priority" : "${supportPivotDefTicketPriority}",
+    "mail-iws" : "${supportPivotIWSMail}",
+    "jira-login" : "${supportPivotJIRALogin}",
+    "jira-passwd" : "${supportPivotJIRAPwd}",
+    "jira-host" : "${supportPivotJIRAHost}",
+    ...
+    "jira-project-key" :  "${supportPivotJIRAProjectKey}",
+    "jira-allowed-tickettype" :  "${supportPivotJIRAAllowedTicketType}",
+    "jira-allowed-priority":  "${supportPivotJIRAAllowedPriority}",
+    "jira-custom-fields" : {
+        "id_ent" : "${supportPivotCFIdEnt}",
+        "id_iws" : "${supportPivotCFIdIws}",
+        "status_ent" : "${supportPivotCFStEnt}",
+        "status_iws" : "${supportPivotCFStIws}",
+        "creation" : "${supportPivotCFCreateDate}",
+        "resolution_ent" : "${supportPivotCFResEnt}",
+        "resolution_iws" : "${supportPivotCFResIws}",
+        "creator" : "${supportPivotCFCreator}",
+        "response_technical" : "${supportPivotCFTechResp}"
+    },
+    "jira-status-mapping": {
+        "statutsJira": ${supportPivotMappingStatus},
+        "statutsDefault" : "${supportPivotDefaultStatus}"
+    }
+  }
+ }
+</pre>
 
+Dans votre springboard, vous devez inclure des variables d'environnement :
+
+<pre>
+supportPivotCollectivity = ${String}
+supportPivotAcademy = ${String}
+supportPivotDefAttribution = ${String}
+supportPivotDefTicketType = ${String}
+supportPivotDefTicketPriority = ${String}
+supportPivotIWSMail = ${String}
+supportPivotJIRALogin = ${String}
+supportPivotJIRAPwd = ${String}
+supportPivotJIRAHost = ${String}
+supportPivotJIRAProjectKey = ${String}
+supportPivotJIRAAllowedTicketType = ${String}
+supportPivotJIRAAllowedPriority = ${String}
+supportPivotCFIdEnt = ${String}
+supportPivotCFIdIws = ${String}
+supportPivotCFStEnt = ${String}
+supportPivotCFStIws = ${String}
+supportPivotCFCreateDate = ${String}
+supportPivotCFResEnt =  ${String}
+supportPivotCFResIws = ${String}
+supportPivotCFCreator = ${String}
+supportPivotCFTechResp = ${String}
+supportPivotMappingStatus = ${String}
+supportPivotDefaultStatus = ${String}
+</pre>
 
 Les paramètres spécifiques à l'application support sont les suivants :
 
