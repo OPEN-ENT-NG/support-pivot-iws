@@ -24,6 +24,7 @@
             }
         },
         "collectivity" : "{{ supportPivotCollectivity }}",
+		"mongo-collection" : "{{ supportPivotMongoCollection | default('pivot') }}",
         "academy" : "{{ supportPivotAcademy }}",
         "default-attribution" : "{{ supportPivotDefAttribution }}",
         "default-tickettype" : "{{ supportPivotDefTicketType }}",
@@ -122,6 +123,10 @@
         "jira-status-mapping": {
             "statutsJira": {{ supportPivotMappingStatus }},
             "statutsDefault" : "{{ supportPivotDefaultStatus }}"
-        }
+        },
+		"ent-status-mapping": {
+			"statutsEnt": {{ supportPivotMappingStatusEnt  | default('{}') }},
+			"statutsDefaultEnt" : "{{ supportPivotDefaultStatusEnt | default('') }}"
+		}
     }
 }
